@@ -1,101 +1,137 @@
 import React from 'react';
-import { downloadJSON, uploadJSON } from '../utils/storageUtils';
 
-const Toolbar = ({ onAdd, onDelete, selectedRef, searchQuery, setSearchQuery, snapEnabled, setSnapEnabled, onSave, onLoad, cubes, setCubes }) => (
+const Toolbar = ({
+  onAdd,
+  onDelete,
+  selectedRef,
+  searchQuery,
+  setSearchQuery,
+  snapEnabled,
+  setSnapEnabled,
+  handleExport,
+  handleImport
+}) => (
   <div
     style={{
       position: 'absolute',
-      zIndex: 10,
       top: 20,
       left: 20,
+      zIndex: 10,
       display: 'flex',
       flexDirection: 'column',
-      gap: '10px',
-      padding: '14px',
-      backgroundColor: '#1e1e1e',
-      borderRadius: '10px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-      width: '22rem',
-      fontFamily: 'sans-serif',
-      color: '#f0f0f0',
+      gap: '16px',
+      padding: '20px',
+      width: '260px',
+      background: 'rgba(30, 30, 30, 0.95)',
+      borderRadius: '12px',
+      boxShadow: '0 6px 16px rgba(0,0,0,0.35)',
+      fontFamily: 'Inter, sans-serif',
+      color: '#f4f4f4'
     }}
   >
-    <button
-      onClick={onAdd}
-      style={{
-        padding: '10px 14px',
-        background: '#4caf50',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontWeight: 'bold',
-      }}
-    >
-      ➕ Add Cube
-    </button>
+    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>📦 Warehouse Tools</h3>
 
-    <button
-      onClick={onDelete}
-      disabled={!selectedRef}
-      style={{
-        padding: '10px 14px',
-        background: selectedRef ? '#f44336' : '#444',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: selectedRef ? 'pointer' : 'not-allowed',
-        fontWeight: 'bold',
-      }}
-    >
-      🗑️ Delete Selected
-    </button>
+    {/* Cube Actions */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <button
+        onClick={onAdd}
+        style={buttonStyle('#4caf50')}
+      >
+        ➕ Add Cube
+      </button>
+      <button
+        onClick={onDelete}
+        disabled={!selectedRef}
+        style={buttonStyle(selectedRef ? '#f44336' : '#555', !selectedRef)}
+      >
+        🗑️ Delete Selected
+      </button>
+    </div>
 
-        <button
-        onClick={() => downloadJSON(cubes)}
-        style={{ padding: '8px 12px', background: '#2196f3', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}
-        >
-        💾 Save Layout
-    </button>
+    {/* Layout Actions */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <button
+        onClick={handleExport}
+        style={buttonStyle('#2196f3')}
+      >
+        📤 Export Layout
+      </button>
 
-    <button
-        onClick={() => uploadJSON(data => setCubes(data))}
-        style={{ padding: '8px 12px', background: '#ff9800', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}
-        >
-        📂 Load Layout
-    </button>
+      <label
+        style={{
+          fontSize: '14px',
+          fontWeight: 500,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px'
+        }}
+      >
+        📥 Import Layout
+        <input
+          type="file"
+          accept=".json"
+          onChange={handleImport}
+          style={{
+            padding: '6px',
+            background: '#1e1e1e',
+            color: '#ddd',
+            border: '1px solid #444',
+            borderRadius: '6px',
+            fontSize: '13px'
+          }}
+        />
+      </label>
+    </div>
 
+    {/* Search */}
     <input
       type="text"
-      placeholder="Search SKU or Category..."
+      placeholder="🔍 Search SKU or Category..."
       value={searchQuery}
       onChange={(e) => setSearchQuery(e.target.value)}
       style={{
         padding: '10px 12px',
+        borderRadius: '8px',
         fontSize: '14px',
-        borderRadius: '6px',
+        backgroundColor: '#2b2b2b',
         border: '1px solid #555',
-        backgroundColor: '#2c2c2c',
-        color: '#f0f0f0',
-        width: '100%',
-        boxSizing: 'border-box',
+        color: '#f0f0f0'
       }}
     />
 
-
-
-
-    <label style={{ display: 'flex', alignItems: 'center', color: 'white' }}>
-        <input
-            type="checkbox"
-            checked={snapEnabled}
-            onChange={(e) => setSnapEnabled(e.target.checked)}
-            style={{ marginRight: '8px' }}
-        />
-        Enable Snapping
+    {/* Snapping Toggle */}
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        fontSize: '14px',
+        fontWeight: 500,
+        gap: '10px'
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={snapEnabled}
+        onChange={(e) => setSnapEnabled(e.target.checked)}
+        style={{ width: '18px', height: '18px' }}
+      />
+      Enable Snapping
     </label>
-
   </div>
 );
+
+// 🧩 Button Style Helper
+const buttonStyle = (bg, disabled = false) => ({
+  padding: '10px 14px',
+  background: bg,
+  color: 'white',
+  border: 'none',
+  borderRadius: '8px',
+  fontWeight: 'bold',
+  fontSize: '14px',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  opacity: disabled ? 0.5 : 1,
+  transition: 'background 0.3s ease'
+});
 
 export default Toolbar;

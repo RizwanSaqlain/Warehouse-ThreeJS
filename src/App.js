@@ -25,56 +25,30 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dimensionTargetRef, setDimensionTargetRef] = useState(null);
   const [snapEnabled, setSnapEnabled] = useState(true);
-
-  const MAX_HISTORY = 20;
   const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [redoStack, setRedoStack] = useState([]);
 
-  const pushToHistory = (newCubes) => {
-    const newHistory = [...history.slice(0, historyIndex + 1), newCubes];
-    if (newHistory.length > MAX_HISTORY) newHistory.shift();
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+  const applyCubesUpdate = (updaterFn) => {
+    setCubes((prevCubes) => {
+      const updatedCubes = updaterFn(prevCubes);
+      setHistory((prevHistory) => {
+        const newHistory = [...prevHistory, prevCubes];
+        return newHistory.length > 20 ? newHistory.slice(1) : newHistory;
+      });
+      setRedoStack([]);
+      return updatedCubes;
+    });
   };
-
-  const undo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setCubes(history[historyIndex - 1]);
-    }
-  };
-
-  // Call this whenever cubes change (add/delete/update)
-  useEffect(() => {
-    pushToHistory(cubes);
-  }, [cubes]);
-
-  useEffect(() => {
-    const handleUndo = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault();
-        undo();
-      }
-    };
-    window.addEventListener('keydown', handleUndo);
-    return () => window.removeEventListener('keydown', handleUndo);
-  }, [history, historyIndex]);
-
-
 
   const addCube = () => {
-    const originX = 0;
-    const originZ = 0;
     const newId = Date.now();
     const itemCount = cubes.length + 1;
-    
-
-    setCubes([
-      ...cubes,
+    applyCubesUpdate((prev) => [
+      ...prev,
       {
         id: newId,
         ref: React.createRef(),
-        position: [originX, 0.5, originZ],
+        position: [0, 0.5, 0],
         size: [1, 1, 1],
         item: {
           sku: `Item${itemCount}`,
@@ -87,14 +61,44 @@ export default function App() {
 
   const deleteCube = () => {
     if (!selectedRef) return;
-    setCubes(cubes.filter(c => c.ref !== selectedRef));
+    applyCubesUpdate(prev => prev.filter(c => c.ref !== selectedRef));
     setSelectedRef(null);
   };
 
   const updateCubeItem = (id, newItem) => {
-    setCubes(prev =>
+    applyCubesUpdate(prev =>
       prev.map(c => (c.id === id ? { ...c, item: newItem } : c))
     );
+  };
+
+  const updateCubeSize = (ref, newSize) => {
+    applyCubesUpdate(prev =>
+      prev.map(c => (c.ref === ref ? { ...c, size: newSize } : c))
+    );
+  };
+
+  const undoCubes = () => {
+    setHistory((prevHistory) => {
+      if (prevHistory.length === 0) return prevHistory;
+      setCubes((current) => {
+        const lastState = prevHistory[prevHistory.length - 1];
+        setRedoStack((prevRedo) => [...prevRedo, current]);
+        return lastState;
+      });
+      return prevHistory.slice(0, -1);
+    });
+  };
+
+  const redoCubes = () => {
+    setRedoStack((prevRedo) => {
+      if (prevRedo.length === 0) return prevRedo;
+      setCubes((current) => {
+        const nextState = prevRedo[prevRedo.length - 1];
+        setHistory((prevHistory) => [...prevHistory, current]);
+        return nextState;
+      });
+      return prevRedo.slice(0, -1);
+    });
   };
 
   const getCubeSize = (ref) => {
@@ -102,42 +106,63 @@ export default function App() {
     return cube?.size || [1, 1, 1];
   };
 
-  const updateCubeSize = (ref, newSize) => {
-    setCubes(prev =>
-      prev.map(c => (c.ref === ref ? { ...c, size: newSize } : c))
-    );
-  };
-
   const getSelectedCube = () =>
     cubes.find(c => c.ref.current === selectedRef?.current);
 
-
-  // Save cube layout to localStorage
-  const saveLayout = () => {
-    const data = cubes.map(cube => ({
+  const handleExport = () => {
+    const exportData = cubes.map(cube => ({
       id: cube.id,
-      position: cube.ref.current.position.toArray(),
+      position: cube.ref.current?.position.toArray() || cube.position,
       size: cube.size,
       item: cube.item
     }));
-    localStorage.setItem('warehouseLayout', JSON.stringify(data));
-    alert('Layout saved!');
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'warehouse-layout.json';
+    a.click();
+
+    URL.revokeObjectURL(url);
   };
 
-  // Load cube layout from localStorage
-  const loadLayout = () => {
-    const data = localStorage.getItem('warehouseLayout');
-    if (!data) return;
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    const parsed = JSON.parse(data);
-    setCubes(
-      parsed.map(cube => ({
-        ...cube,
-        ref: React.createRef()
-      }))
-    );
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target.result);
+        const importedCubes = json.map(cube => ({
+          ...cube,
+          ref: React.createRef()
+        }));
+        applyCubesUpdate(() => importedCubes);
+      } catch (err) {
+        alert('Failed to import JSON: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        // e.preventDefault();
+        undoCubes();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        // e.preventDefault();
+        redoCubes();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <>
@@ -149,20 +174,23 @@ export default function App() {
         setSearchQuery={setSearchQuery}
         snapEnabled={snapEnabled}
         setSnapEnabled={setSnapEnabled}
-        onSave={saveLayout}
-        onLoad={loadLayout}
-        cubes={cubes}                 // ✅ Add this
-        setCubes={setCubes} 
+        handleExport={handleExport}
+        handleImport={handleImport}
+        cubes={cubes}
+        setCubes={setCubes}
       />
 
       <Canvas camera={{ position: [3, 3, 5], fov: 75 }} shadows>
         <SceneContents
           cubes={cubes}
+          setCubes={setCubes}
           selectedRef={selectedRef}
           setSelectedRef={setSelectedRef}
           searchQuery={searchQuery}
           onRightClick={setDimensionTargetRef}
           snapEnabled={snapEnabled}
+          setDimensionTargetRef={setDimensionTargetRef}
+          updateCubes={applyCubesUpdate}
         />
       </Canvas>
 
@@ -172,12 +200,9 @@ export default function App() {
           getCubeSize={getCubeSize}
           updateCubeSize={updateCubeSize}
           onClose={() => setDimensionTargetRef(null)}
-          item={
-            cubes.find(c => c.ref === dimensionTargetRef)?.item
-          }
+          item={cubes.find(c => c.ref?.current === dimensionTargetRef?.current)?.item}
         />
       )}
-
 
       <ItemEditor cube={getSelectedCube()} onUpdate={updateCubeItem} />
     </>

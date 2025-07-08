@@ -8,6 +8,7 @@ const DimensionEditor = ({
   item = {},
 }) => {
   const sku = item.sku || 'Unnamed';
+  if (!refTarget?.current) return null;
 
   return (
     <div
@@ -18,24 +19,57 @@ const DimensionEditor = ({
         zIndex: 10,
         background: '#1e1e1e',
         color: '#f0f0f0',
-        padding: '16px',
-        borderRadius: '10px',
-        boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3)',
-        width: 220,
-        fontFamily: 'sans-serif',
+        padding: '20px',
+        borderRadius: '12px',
+        boxShadow: '0 12px 24px rgba(0, 0, 0, 0.4)',
+        width: 280,
+        fontFamily: 'Inter, sans-serif',
         fontSize: '14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
       }}
     >
-      <h4 style={{ marginTop: 0, marginBottom: 4, color: '#ffffff' }}>
+      <h3 style={{
+        margin: 0,
+        fontSize: '20px',
+        fontWeight: '700',
+        color: '#ffffff',
+        letterSpacing: '0.5px',
+      }}>
         Edit Dimensions
-      </h4>
-      <div style={{ fontSize: '13px', marginBottom: 12, color: '#aaa' }}>
-        <strong>Item:</strong> {sku}
+      </h3>
+
+      <div>
+        <div style={{
+          fontSize: '15px',
+          fontWeight: '600',
+          color: '#00eaff',
+          fontFamily: 'monospace',
+          marginBottom: 4,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {sku}
+        </div>
+        <div style={{ fontSize: '12px', color: '#aaa' }}>
+          Right-click a cube to open this panel or switch.
+        </div>
       </div>
 
       {['Width', 'Height', 'Depth'].map((label, i) => (
-        <div key={label} style={{ marginBottom: 10 }}>
-          <label style={{ display: 'block', marginBottom: 4 }}>{label}</label>
+        <div key={label}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: 4,
+              fontWeight: '500',
+              color: '#cccccc',
+            }}
+          >
+            {label}
+          </label>
           <input
             type="number"
             min="0.1"
@@ -48,12 +82,14 @@ const DimensionEditor = ({
             }}
             style={{
               width: '100%',
-              padding: '6px',
-              background: '#2c2c2c',
+              padding: '10px',
+              background: '#2a2a2a',
               color: '#f0f0f0',
-              border: '1px solid #444',
-              borderRadius: '6px',
-              boxSizing: 'border-box',
+              border: '1px solid #555',
+              borderRadius: '8px',
+              outline: 'none',
+              transition: 'border-color 0.2s ease',
+              boxSizing: 'border-box'
             }}
           />
         </div>
@@ -63,16 +99,20 @@ const DimensionEditor = ({
         onClick={onClose}
         style={{
           width: '100%',
-          marginTop: 12,
-          padding: '8px',
-          background: '#444',
+          padding: '10px',
+          background: '#3fcf6e',
           color: '#fff',
           border: 'none',
-          borderRadius: '6px',
+          borderRadius: '8px',
           cursor: 'pointer',
+          fontWeight: 'bold',
+          fontSize: '14px',
+          transition: 'background 0.2s ease',
         }}
+        onMouseOver={(e) => (e.currentTarget.style.background = '#34b75e')}
+        onMouseOut={(e) => (e.currentTarget.style.background = '#3fcf6e')}
       >
-        Close
+        ✅ Save & Close
       </button>
     </div>
   );

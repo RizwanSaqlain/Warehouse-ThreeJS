@@ -1,5 +1,5 @@
 // src/components/SceneContents.js
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, TransformControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import Cube from './MyCube';
 import Wall from './Walls';
 
-const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRightClick, snapEnabled }) => {
+const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRightClick, snapEnabled, setCubes, setDimensionTargetRef, updateCubes}) => {
   const { camera } = useThree();
   const orbitControlsRef = useRef();
   const transformRef = useRef();
@@ -15,6 +15,8 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
   const isDraggingRef = useRef(false);
   const pressedKeysRef = useRef({});
   const lowerQuery = searchQuery?.toLowerCase?.();
+  const audio = new Audio('/sounds/pop1.wav');
+  audio.volume = 0.2;
 
   const BOUNDS = {
     minX: -10,
@@ -25,39 +27,73 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
 
   const gridSnap = (value) => Math.round(value - 0.5) + 0.5;
 
-  const getSnappedPosition = (pos) => {
-    const x = gridSnap(pos.x);
-    const z = gridSnap(pos.z);
+  const getSnappedPosition = (pos, size) => {
+    const snapToGrid = (val, dim, min, max) => {
+      const minEdge = val - dim / 2;
+      const snappedMin = Math.round(minEdge);
+      const center = snappedMin + dim / 2;
+      return Math.max(min + dim / 2, Math.min(max - dim / 2, center));
+    };
+
     return {
-      x: Math.max(BOUNDS.minX, Math.min(BOUNDS.maxX, x)),
-      z: Math.max(BOUNDS.minZ, Math.min(BOUNDS.maxZ, z))
+      x: snapToGrid(pos.x, size[0], BOUNDS.minX, BOUNDS.maxX),
+      z: snapToGrid(pos.z, size[2], BOUNDS.minZ, BOUNDS.maxZ),
     };
   };
+
+
+
+  const getBoundingBox = (ref, size) => {
+    const center = ref.position;
+    return {
+      minX: center.x - size[0] / 2,
+      maxX: center.x + size[0] / 2,
+      minZ: center.z - size[2] / 2,
+      maxZ: center.z + size[2] / 2,
+    };
+  };
+
+  const EPSILON = 0.1;
+
+  const boxesOverlap = (a, b) => {
+    return (
+      a.minX < b.maxX - EPSILON &&
+      a.maxX > b.minX + EPSILON &&
+      a.minZ < b.maxZ - EPSILON &&
+      a.maxZ > b.minZ + EPSILON
+    );
+  };
+
+
 
   useFrame(() => {
     if (isDraggingRef.current && selectedRef?.current) {
       const pos = selectedRef.current.position;
-      const { x, z } = ((snapEnabled) ? getSnappedPosition(pos) : { x: pos.x, z: pos.z });
-      
+      const { x, z } = pos
+
+      const selectedSize = cubes.find(c => c.ref.current === selectedRef.current)?.size || [1,1,1];
+      const selectedBox = getBoundingBox(selectedRef.current, selectedSize);
 
       const stackedBelow = cubes
-        .map(cube => cube.ref.current)
-        .filter(ref =>
-          ref &&
-          ref !== selectedRef.current &&
-          Math.abs(ref.position.x - x) < 0.001 &&
-          Math.abs(ref.position.z - z) < 0.001
-        );
+        .filter(c => {
+          const ref = c.ref.current;
+          if (!ref || ref === selectedRef.current) return false;
+
+          const otherBox = getBoundingBox(ref, c.size || [1, 1, 1]);
+          return boxesOverlap(selectedBox, otherBox);
+        });
+
 
       const maxYBelow = stackedBelow.length
-        ? Math.max(...stackedBelow.map(ref => ref.position.y))
-        : -0.5;
+        ? Math.max(...stackedBelow.map(c => c.ref.current.position.y + (c.size?.[1] || 1) / 2))
+        : 0;
 
-      const targetY = maxYBelow + 1;
-      pos.y = THREE.MathUtils.lerp(pos.y, targetY, 0.1);
+      const finalY = maxYBelow + (selectedSize[1] / 2);
+      selectedRef.current.position.set(x, finalY, z);
+
+      pos.y = THREE.MathUtils.lerp(pos.y, finalY, 0.1);
     }
 
-    // Keyboard-based camera movement
     const speed = 0.1;
     const keys = pressedKeysRef.current;
     const direction = new THREE.Vector3();
@@ -151,7 +187,14 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
         <planeGeometry args={[40, 40]} />
         <meshStandardMaterial color="#24292E" metalness={0.5} roughness={0.2} />
       </mesh>
-      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} onClick={() => setSelectedRef(null)}>
+      <mesh
+        position={[0, 0.01, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        onClick={() => {
+          setSelectedRef(null);
+          setDimensionTargetRef?.(null); 
+        }}
+      >
         <planeGeometry args={[100, 100]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
@@ -196,25 +239,58 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
             isDraggingRef.current = false;
 
             const pos = selectedRef.current.position;
-            const { x, z } = ((snapEnabled) ? getSnappedPosition(pos) : { x: pos.x, z: pos.z });
-      
+            const selectedSize = cubes.find(c => c.ref.current === selectedRef.current)?.size || [1, 1, 1];
 
-            const stackedBelow = cubes
-              .map(c => c.ref.current)
-              .filter(ref =>
-                ref && ref !== selectedRef.current &&
-                Math.abs(ref.position.x - x) < 0.001 &&
-                Math.abs(ref.position.z - z) < 0.001
-              );
+            // 🔁 Snap the position
+            const raw = snapEnabled
+              ? getSnappedPosition(pos, selectedSize)
+              : {
+                  x: Math.max(BOUNDS.minX + selectedSize[0] / 2, Math.min(BOUNDS.maxX - selectedSize[0] / 2, pos.x)),
+                  z: Math.max(BOUNDS.minZ + selectedSize[2] / 2, Math.min(BOUNDS.maxZ - selectedSize[2] / 2, pos.z)),
+                };
 
-            const maxY = stackedBelow.length ? Math.max(...stackedBelow.map(ref => ref.position.y)) : -0.5;
-            const finalY = maxY + 1;
+            const { x, z } = raw;
 
+
+            // 🔁 Set snapped position first (without Y)
+            selectedRef.current.position.set(x, pos.y, z);
+
+            // ✅ NOW calculate bounding box with new snapped position
+            const selectedBox = {
+              minX: x - selectedSize[0] / 2,
+              maxX: x + selectedSize[0] / 2,
+              minZ: z - selectedSize[2] / 2,
+              maxZ: z + selectedSize[2] / 2,
+            };
+
+            // 📦 Check for stacked objects below AFTER snapping
+            const stackedBelow = cubes.filter(c => {
+              const ref = c.ref.current;
+              if (!ref || ref === selectedRef.current) return false;
+
+              const otherBox = getBoundingBox(ref, c.size || [1, 1, 1]);
+              return boxesOverlap(selectedBox, otherBox);
+            });
+
+            const maxYBelow = stackedBelow.length
+              ? Math.max(...stackedBelow.map(c => c.ref.current.position.y + (c.size?.[1] || 1) / 2))
+              : 0;
+
+            const finalY = maxYBelow + (selectedSize[1] / 2);
+
+            // ✅ Apply final position
             selectedRef.current.position.set(x, finalY, z);
 
-            const audio = new Audio('/sounds/pop1.wav');
-            audio.volume = 0.2;
             audio.play();
+
+            // 🧠 Update state
+            updateCubes(prev =>
+              prev.map(c =>
+                c.ref === selectedRef
+                  ? { ...c, position: selectedRef.current.position.toArray() }
+                  : c
+              )
+            );
           }}
         />
       )}
