@@ -5,6 +5,9 @@ import SceneContents from './components/SceneContents';
 import ItemEditor from './components/ItemEditor';
 import Toolbar from './components/Toolbar';
 import DimensionEditor from './components/DimensionEditor';
+import TopDownMapView from './components/TopDownMapView';
+import CameraControlsHint from './components/CameraControlsHint';
+
 
 export default function App() {
   const [cubes, setCubes] = useState([
@@ -16,7 +19,11 @@ export default function App() {
       item: {
         sku: 'Item1',
         quantity: 10,
-        category: 'Electronics'
+        category: 'Electronics',
+        weight: 0,
+        notes: '',
+        shipped: false,
+        color: '#ffffff'
       }
     }
   ]);
@@ -27,6 +34,9 @@ export default function App() {
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [history, setHistory] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
+  const [shippedItems, setShippedItems] = useState([]);
+  const [showMapView, setShowMapView] = useState(false);
+
 
   const applyCubesUpdate = (updaterFn) => {
     setCubes((prevCubes) => {
@@ -53,7 +63,12 @@ export default function App() {
         item: {
           sku: `Item${itemCount}`,
           quantity: 0,
-          category: 'Uncategorized'
+          category: 'Uncategorized',
+          weight: 0,
+          notes: '',
+          shipped: false,
+          color: '#ffffff'
+          
         }
       }
     ]);
@@ -69,6 +84,14 @@ export default function App() {
     applyCubesUpdate(prev =>
       prev.map(c => (c.id === id ? { ...c, item: newItem } : c))
     );
+  };
+
+  const shipCube = () => {
+    const cube = getSelectedCube();
+    if (!cube) return;
+    setShippedItems(prev => [...prev, { ...cube, item: { ...cube.item, shipped: true } }]);
+    applyCubesUpdate(prev => prev.filter(c => c.ref !== selectedRef));
+    setSelectedRef(null);
   };
 
   const updateCubeSize = (ref, newSize) => {
@@ -151,11 +174,9 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        // e.preventDefault();
         undoCubes();
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-        // e.preventDefault();
         redoCubes();
       }
     };
@@ -178,6 +199,7 @@ export default function App() {
         handleImport={handleImport}
         cubes={cubes}
         setCubes={setCubes}
+        setShowMapView={ setShowMapView }
       />
 
       <Canvas camera={{ position: [3, 3, 5], fov: 75 }} shadows>
@@ -194,6 +216,8 @@ export default function App() {
         />
       </Canvas>
 
+      <CameraControlsHint />
+
       {dimensionTargetRef && (
         <DimensionEditor
           refTarget={dimensionTargetRef}
@@ -204,7 +228,16 @@ export default function App() {
         />
       )}
 
-      <ItemEditor cube={getSelectedCube()} onUpdate={updateCubeItem} />
+      <ItemEditor cube={getSelectedCube()} onUpdate={updateCubeItem} onShip={shipCube} />
+
+      {showMapView && (
+        <TopDownMapView
+          cubes={cubes}
+          selectedRef={selectedRef}
+          onClose={() => setShowMapView(false)}
+        />
+      )}
+
     </>
   );
 }

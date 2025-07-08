@@ -50,7 +50,9 @@ const Cube = ({
       >
         <boxGeometry args={size} />
         <meshStandardMaterial
-          color={isSelected ? 'orange' : hovered ? '#ccc' : color}
+          color={color}
+          emissive={isSelected ? 'white' : 'black'}   // adds glow on selection
+          emissiveIntensity={0.15}
           metalness={0.3}
           roughness={0.4}
         />

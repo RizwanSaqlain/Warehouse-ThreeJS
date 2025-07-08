@@ -9,7 +9,8 @@ const Toolbar = ({
   snapEnabled,
   setSnapEnabled,
   handleExport,
-  handleImport
+  handleImport,
+  setShowMapView
 }) => (
   <div
     style={{
@@ -117,6 +118,17 @@ const Toolbar = ({
       />
       Enable Snapping
     </label>
+
+    <button
+      onClick={() => setShowMapView((prev) => !prev)}
+      style={buttonStyle('#673ab7')}
+    >
+      { /* Toggle label based on state */ }
+      {typeof setShowMapView === 'function' && typeof setShowMapView.current === 'boolean'
+        ? (setShowMapView.current ? 'Hide 2D Map' : 'Show 2D Map')
+        : 'Toggle 2D Map'}
+    </button>
+
   </div>
 );
 

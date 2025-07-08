@@ -97,6 +97,7 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
     const speed = 0.1;
     const keys = pressedKeysRef.current;
     const direction = new THREE.Vector3();
+    const direction2 = new THREE.Vector3();
     const right = new THREE.Vector3();
     const moveVector = new THREE.Vector3();
 
@@ -109,18 +110,20 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
 
     if (moveForward || moveBackward || moveLeft || moveRight || zoomIn || zoomOut) {
       camera.getWorldDirection(direction);
+      camera.getWorldDirection(direction2);
       direction.y = 0;
       direction.normalize();
+      direction2.normalize();
 
       right.crossVectors(direction, camera.up).normalize();
       if (moveForward) moveVector.add(direction);
       if (moveBackward) moveVector.sub(direction);
       if (moveLeft) moveVector.sub(right);
       if (moveRight) moveVector.add(right);
-
+      
       moveVector.normalize().multiplyScalar(speed);
-      if (zoomIn) camera.position.add(direction.clone().multiplyScalar(speed));
-      if (zoomOut) camera.position.sub(direction.clone().multiplyScalar(speed));
+      if (zoomIn) camera.position.add(direction2.clone().multiplyScalar(speed));
+      if (zoomOut) camera.position.sub(direction2.clone().multiplyScalar(speed));
 
       camera.position.add(moveVector);
       orbitControlsRef.current.target.add(moveVector);
@@ -210,7 +213,7 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
             onRightClick={onRightClick}
             isSelected={cube.ref.current === selectedRef?.current}
             label={cube.item?.sku || ''}
-            color={match ? '#00ccff' : 'white'}
+            color={match ? '#00ccff' : cube.item?.color || '#ffffff' }
             item={cube.item}
             size={cube.size || [1, 1, 1]}
           />

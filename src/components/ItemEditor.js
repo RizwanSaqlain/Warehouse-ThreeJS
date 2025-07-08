@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { color } from 'three/tsl';
 
 const panelStyle = {
   position: 'absolute',
@@ -39,9 +40,9 @@ const labelStyle = {
   color: '#ccc'
 };
 
-const toggleButtonStyle = {
+const buttonStyle = {
   marginTop: '10px',
-  padding: '8px 12px',
+  padding: '10px 14px',
   fontSize: '13px',
   fontWeight: 600,
   borderRadius: '8px',
@@ -52,19 +53,52 @@ const toggleButtonStyle = {
   transition: 'background 0.2s ease'
 };
 
-export default function ItemEditor({ cube, onUpdate }) {
-  const [item, setItem] = useState({ sku: '', quantity: '', category: '' });
+const presetColors = [
+  '#f44336', // Red
+  '#2196f3', // Blue
+  '#4caf50', // Green
+  '#ffeb3b', // Yellow
+  '#9c27b0', // Purple
+  '#9e9e9e'  // Gray
+];
+
+
+export default function ItemEditor({ cube, onUpdate, onShip }) {
+  const [item, setItem] = useState({
+    sku: '',
+    quantity: '',
+    category: '',
+    weight: '',
+    notes: '',
+    color: '#ffffff'
+  });
+
   const [showDetails, setShowDetails] = useState(true);
   const contentRef = useRef();
 
   useEffect(() => {
-    if (cube) setItem(cube.item || { sku: '', quantity: '', category: '' });
+    if (cube) {
+      setItem({
+        sku: cube.item?.sku || '',
+        quantity: cube.item?.quantity || '',
+        category: cube.item?.category || '',
+        weight: cube.item?.weight || '',
+        notes: cube.item?.notes || '',
+        color: cube.item?.color || '#ffffff'
+      });
+    }
   }, [cube]);
 
   const handleChange = (field, value) => {
     const updated = { ...item, [field]: value };
     setItem(updated);
     if (cube) onUpdate(cube.id, updated);
+  };
+
+  const handleShip = () => {
+    if (onShip && cube) {
+      onShip(cube);
+    }
   };
 
   if (!cube) return null;
@@ -114,14 +148,86 @@ export default function ItemEditor({ cube, onUpdate }) {
               onChange={(e) => handleChange('category', e.target.value)}
             />
           </div>
+
+          <div>
+            <label style={labelStyle}>🎨 Color</label>
+            <select
+              style={inputStyle}
+              value={presetColors.includes(item.color) ? item.color : 'custom'}
+              onChange={(e) => {
+                const selected = e.target.value;
+                if (selected === 'custom') {
+                  // If it's currently a preset, switch to default custom color
+                  if (presetColors.includes(item.color)) {
+                    handleChange('color', '#ffffff');
+                  }
+                  return;
+                }
+                handleChange('color', selected);
+              }}
+            >
+
+              <option value="#f44336">Red</option>
+              <option value="#2196f3">Blue</option>
+              <option value="#4caf50">Green</option>
+              <option value="#ffeb3b">Yellow</option>
+              <option value="#9c27b0">Purple</option>
+              <option value="#9e9e9e">Gray</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+
+          {!presetColors.includes(item.color) && (
+            <div>
+              <label style={labelStyle}>🎨 Custom Color</label>
+              <input
+                type="color"
+                value={item.color || '#ffffff'}
+                onChange={(e) => handleChange('color', e.target.value)}
+                style={{
+                  ...inputStyle,
+                  padding: 0,
+                  height: '40px',
+                  width: '100%',
+                  cursor: 'pointer'
+                }}
+              />
+            </div>
+          )}
+
+
+          <div>
+            <label style={labelStyle}>⚖️ Weight (kg)</label>
+            <input
+              style={inputStyle}
+              type="number"
+              placeholder="e.g. 2.5"
+              value={item.weight}
+              onChange={(e) => handleChange('weight', parseFloat(e.target.value) || '')}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>🗒️ Notes</label>
+            <textarea
+              style={{ ...inputStyle, height: '60px', resize: 'vertical' }}
+              placeholder="Enter any special instructions..."
+              value={item.notes}
+              onChange={(e) => handleChange('notes', e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
-      <button
-        style={toggleButtonStyle}
-        onClick={() => setShowDetails((prev) => !prev)}
-      >
+      <button style={buttonStyle} onClick={() => setShowDetails(prev => !prev)}>
         {showDetails ? '🔽 Hide Details' : '▶ Show Details'}
+      </button>
+
+      <button
+        style={{ ...buttonStyle, backgroundColor: '#2e7d32' }}
+        onClick={handleShip}
+      >
+        🚚 Ship Item
       </button>
     </div>
   );
