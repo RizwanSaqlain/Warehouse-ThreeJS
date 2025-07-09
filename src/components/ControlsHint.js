@@ -31,7 +31,7 @@ const hintStyles = {
 
 const Key = ({ children }) => <span style={hintStyles.key}>{children}</span>;
 
-export default function CameraControlsHint() {
+export default function ControlsHint() {
   return (
     <div style={hintStyles.container}>
       <div><Key>W</Key><Key>A</Key><Key>S</Key><Key>D</Key> / <Key>↑</Key><Key>↓</Key><Key>←</Key><Key>→</Key> — Move Camera</div>

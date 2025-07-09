@@ -1,6 +1,16 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, memo } from 'react';
 import { Text, Html } from '@react-three/drei';
+
+const tooltipStyle = {
+  background: 'rgba(0, 0, 0, 0.7)',
+  color: 'white',
+  padding: '8px 12px',
+  borderRadius: '6px',
+  fontSize: '12px',
+  whiteSpace: 'nowrap',
+  pointerEvents: 'none',
+};
 
 const Cube = ({
   position,
@@ -17,20 +27,15 @@ const Cube = ({
   const labelRef = useRef();
   const { camera } = useThree();
 
-  // Smoothly rotate label to face the camera on Y axis only
   useFrame(() => {
-    if (labelRef.current && hovered) {
+    if (hovered && labelRef.current) {
       const target = camera.position.clone().sub(labelRef.current.position);
-      const angle = Math.atan2(target.x, target.z); // Only Y rotation
-      labelRef.current.rotation.y = angle;
+      labelRef.current.rotation.y = Math.atan2(target.x, target.z);
     }
   });
 
   return (
-    <group
-      ref={cubeRef}
-      position={position}
-    >
+    <group ref={cubeRef} position={position}>
       <mesh
         onClick={(e) => {
           e.stopPropagation();
@@ -51,15 +56,14 @@ const Cube = ({
         <boxGeometry args={size} />
         <meshStandardMaterial
           color={color}
-          emissive={isSelected ? 'white' : 'black'}   // adds glow on selection
+          emissive={isSelected ? 'white' : 'black'}
           emissiveIntensity={0.15}
           metalness={0.3}
           roughness={0.4}
         />
-        
       </mesh>
 
-      {hovered && (
+      {hovered && !!label && (
         <Text
           ref={labelRef}
           position={[0, size[1] / 2 + 0.3, 0]}
@@ -74,21 +78,12 @@ const Cube = ({
         </Text>
       )}
 
-      {/* Tooltip with all item info */}
       {hovered && (
         <Html
           position={[0, size[1] / 2 + 0.8, 0]}
           center
           distanceFactor={10}
-          style={{
-            background: 'rgba(0, 0, 0, 0.7)',
-            color: 'white',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            whiteSpace: 'nowrap',
-            pointerEvents: 'none',
-          }}
+          style={tooltipStyle}
         >
           <div><strong>SKU:</strong> {item?.sku || '—'}</div>
           <div><strong>Qty:</strong> {item?.quantity ?? 0}</div>
@@ -99,4 +94,4 @@ const Cube = ({
   );
 };
 
-export default Cube;
+export default memo(Cube);

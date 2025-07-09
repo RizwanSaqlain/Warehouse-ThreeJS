@@ -1,11 +1,10 @@
-// src/components/TopDownMapView.js
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const WAREHOUSE_WIDTH = 20;
 const WAREHOUSE_DEPTH = 20;
 
 const mapStyles = {
-  container: (x, y, dragging) => ({
+  container: (x, y, dragging, width) => ({
     position: 'absolute',
     top: y,
     left: x,
@@ -18,11 +17,12 @@ const mapStyles = {
     padding: '10px',
     boxShadow: '0 4px 15px rgba(0, 0, 0, 0.6)',
     userSelect: 'none',
-    width: '420px',
+    width: `${width}px`,
+    resize: 'both',
+    overflow: 'auto',
   }),
   canvas: {
     position: 'relative',
-    width: '100%',
     height: '400px',
     backgroundColor: '#2c2c2c',
     backgroundImage: `radial-gradient(#444 1px, transparent 1px)`,
@@ -70,10 +70,25 @@ const mapStyles = {
 
 export default function TopDownMapView({ cubes, selectedRef, onClose }) {
   const [dragging, setDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 20, y: window.innerHeight / 2 - 150 });
+  const [position, setPosition] = useState({ x: 20, y: window.innerHeight / 2 - 100 });
+  const [width, setWidth] = useState(420);
+  const containerRef = useRef(null);
   const dragOffset = useRef({ x: 0, y: 0 });
 
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        setWidth(entry.contentRect.width);
+      }
+    });
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    return () => resizeObserver.disconnect();
+  }, []);
+
   const handleMouseDown = (e) => {
+    if (e.target.classList.contains('resizer')) return;
     setDragging(true);
     dragOffset.current = {
       x: e.clientX - position.x,
@@ -101,7 +116,8 @@ export default function TopDownMapView({ cubes, selectedRef, onClose }) {
 
   return (
     <div
-      style={mapStyles.container(position.x, position.y, dragging)}
+      ref={containerRef}
+      style={mapStyles.container(position.x, position.y, dragging, width)}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

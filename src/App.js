@@ -1,32 +1,28 @@
-// src/App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import SceneContents from './components/SceneContents';
 import ItemEditor from './components/ItemEditor';
 import Toolbar from './components/Toolbar';
 import DimensionEditor from './components/DimensionEditor';
 import TopDownMapView from './components/TopDownMapView';
-import CameraControlsHint from './components/CameraControlsHint';
-
+import ControlsHint from './components/ControlsHint';
 
 export default function App() {
-  const [cubes, setCubes] = useState([
-    {
-      id: 0,
-      ref: React.createRef(),
-      position: [0, 0.5, 0],
-      size: [1, 1, 1],
-      item: {
-        sku: 'Item1',
-        quantity: 10,
-        category: 'Electronics',
-        weight: 0,
-        notes: '',
-        shipped: false,
-        color: '#ffffff'
-      }
+  const [cubes, setCubes] = useState([{
+    id: 0,
+    ref: React.createRef(),
+    position: [0, 0.5, 0],
+    size: [1, 1, 1],
+    item: {
+      sku: 'Item1',
+      quantity: 10,
+      category: 'Electronics',
+      weight: 0,
+      notes: '',
+      shipped: false,
+      color: '#ffffff'
     }
-  ]);
+  }]);
 
   const [selectedRef, setSelectedRef] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,9 +32,10 @@ export default function App() {
   const [redoStack, setRedoStack] = useState([]);
   const [shippedItems, setShippedItems] = useState([]);
   const [showMapView, setShowMapView] = useState(false);
+  const audioRef = useRef(null);
+  const [musicOn, setMusicOn] = useState(true);
 
-
-  const applyCubesUpdate = (updaterFn) => {
+  const applyCubesUpdate = useCallback((updaterFn) => {
     setCubes((prevCubes) => {
       const updatedCubes = updaterFn(prevCubes);
       setHistory((prevHistory) => {
@@ -48,59 +45,51 @@ export default function App() {
       setRedoStack([]);
       return updatedCubes;
     });
-  };
+  }, []);
 
-  const addCube = () => {
+  const addCube = useCallback(() => {
     const newId = Date.now();
     const itemCount = cubes.length + 1;
-    applyCubesUpdate((prev) => [
-      ...prev,
-      {
-        id: newId,
-        ref: React.createRef(),
-        position: [0, 0.5, 0],
-        size: [1, 1, 1],
-        item: {
-          sku: `Item${itemCount}`,
-          quantity: 0,
-          category: 'Uncategorized',
-          weight: 0,
-          notes: '',
-          shipped: false,
-          color: '#ffffff'
-          
-        }
+    applyCubesUpdate((prev) => [...prev, {
+      id: newId,
+      ref: React.createRef(),
+      position: [0, 0.5, 0],
+      size: [1, 1, 1],
+      item: {
+        sku: `Item${itemCount}`,
+        quantity: 0,
+        category: 'Uncategorized',
+        weight: 0,
+        notes: '',
+        shipped: false,
+        color: '#ffffff'
       }
-    ]);
-  };
+    }]);
+  }, [applyCubesUpdate, cubes.length]);
 
-  const deleteCube = () => {
+  const deleteCube = useCallback(() => {
     if (!selectedRef) return;
     applyCubesUpdate(prev => prev.filter(c => c.ref !== selectedRef));
     setSelectedRef(null);
-  };
+  }, [selectedRef, applyCubesUpdate]);
 
-  const updateCubeItem = (id, newItem) => {
-    applyCubesUpdate(prev =>
-      prev.map(c => (c.id === id ? { ...c, item: newItem } : c))
-    );
-  };
+  const updateCubeItem = useCallback((id, newItem) => {
+    applyCubesUpdate(prev => prev.map(c => (c.id === id ? { ...c, item: newItem } : c)));
+  }, [applyCubesUpdate]);
 
-  const shipCube = () => {
-    const cube = getSelectedCube();
+  const shipCube = useCallback(() => {
+    const cube = cubes.find(c => c.ref.current === selectedRef?.current);
     if (!cube) return;
     setShippedItems(prev => [...prev, { ...cube, item: { ...cube.item, shipped: true } }]);
     applyCubesUpdate(prev => prev.filter(c => c.ref !== selectedRef));
     setSelectedRef(null);
-  };
+  }, [cubes, selectedRef, applyCubesUpdate]);
 
-  const updateCubeSize = (ref, newSize) => {
-    applyCubesUpdate(prev =>
-      prev.map(c => (c.ref === ref ? { ...c, size: newSize } : c))
-    );
-  };
+  const updateCubeSize = useCallback((ref, newSize) => {
+    applyCubesUpdate(prev => prev.map(c => (c.ref === ref ? { ...c, size: newSize } : c)));
+  }, [applyCubesUpdate]);
 
-  const undoCubes = () => {
+  const undoCubes = useCallback(() => {
     setHistory((prevHistory) => {
       if (prevHistory.length === 0) return prevHistory;
       setCubes((current) => {
@@ -110,9 +99,9 @@ export default function App() {
       });
       return prevHistory.slice(0, -1);
     });
-  };
+  }, []);
 
-  const redoCubes = () => {
+  const redoCubes = useCallback(() => {
     setRedoStack((prevRedo) => {
       if (prevRedo.length === 0) return prevRedo;
       setCubes((current) => {
@@ -122,36 +111,37 @@ export default function App() {
       });
       return prevRedo.slice(0, -1);
     });
-  };
+  }, []);
 
-  const getCubeSize = (ref) => {
+  const getCubeSize = useCallback((ref) => {
     const cube = cubes.find(c => c.ref === ref);
     return cube?.size || [1, 1, 1];
-  };
+  }, [cubes]);
 
-  const getSelectedCube = () =>
-    cubes.find(c => c.ref.current === selectedRef?.current);
+  const getSelectedCube = useCallback(() => {
+    return cubes.find(c => c.ref.current === selectedRef?.current);
+  }, [cubes, selectedRef]);
 
-  const handleExport = () => {
-    const exportData = cubes.map(cube => ({
-      id: cube.id,
-      position: cube.ref.current?.position.toArray() || cube.position,
-      size: cube.size,
-      item: cube.item
-    }));
+  const handleExport = useCallback(() => {
+    requestIdleCallback(() => {
+      const exportData = cubes.map(cube => ({
+        id: cube.id,
+        position: cube.ref.current?.position.toArray() || cube.position,
+        size: cube.size,
+        item: cube.item
+      }));
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'warehouse-layout.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }, [cubes]);
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'warehouse-layout.json';
-    a.click();
-
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = (e) => {
+  const handleImport = useCallback((e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -159,31 +149,57 @@ export default function App() {
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target.result);
-        const importedCubes = json.map(cube => ({
-          ...cube,
-          ref: React.createRef()
-        }));
+        const importedCubes = json.map(cube => ({ ...cube, ref: React.createRef() }));
         applyCubesUpdate(() => importedCubes);
       } catch (err) {
         alert('Failed to import JSON: ' + err.message);
       }
     };
     reader.readAsText(file);
-  };
+  }, [applyCubesUpdate]);
 
   useEffect(() => {
+    let lastKeyTime = 0;
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      const now = Date.now();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && now - lastKeyTime > 300) {
         undoCubes();
+        lastKeyTime = now;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && now - lastKeyTime > 300) {
         redoCubes();
+        lastKeyTime = now;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoCubes, redoCubes]);
+
+  useEffect(() => {
+    const audio = new Audio('/sounds/background_music.mp3');
+    audio.loop = true;
+    audio.volume = 0.4;
+    audio.play().catch(() => {}); // handle autoplay block
+    audioRef.current = audio;
+
+    return () => {
+      audio.pause();
+      audio.src = '';
+    };
   }, []);
+
+  const toggleMusic = useCallback(() => {
+    if (!audioRef.current) return;
+    if (musicOn) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(() => {});
+    }
+    setMusicOn(prev => !prev);
+  }, [musicOn]);
+
+  const cameraSettings = useMemo(() => ({ position: [3, 3, 5], fov: 75 }), []);
 
   return (
     <>
@@ -199,13 +215,15 @@ export default function App() {
         handleImport={handleImport}
         cubes={cubes}
         setCubes={setCubes}
-        setShowMapView={ setShowMapView }
+        setShowMapView={setShowMapView}
+        showMapView={showMapView}
+        toggleMusic={toggleMusic}
+        musicOn={musicOn}
       />
 
-      <Canvas camera={{ position: [3, 3, 5], fov: 75 }} shadows>
+      <Canvas camera={cameraSettings} shadows>
         <SceneContents
           cubes={cubes}
-          setCubes={setCubes}
           selectedRef={selectedRef}
           setSelectedRef={setSelectedRef}
           searchQuery={searchQuery}
@@ -216,7 +234,7 @@ export default function App() {
         />
       </Canvas>
 
-      <CameraControlsHint />
+      <ControlsHint />
 
       {dimensionTargetRef && (
         <DimensionEditor
@@ -237,7 +255,6 @@ export default function App() {
           onClose={() => setShowMapView(false)}
         />
       )}
-
     </>
   );
 }

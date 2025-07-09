@@ -1,30 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { color } from 'three/tsl';
 
-const panelStyle = {
+const presetColors = ['#f44336', '#2196f3', '#4caf50', '#ffeb3b', '#9c27b0', '#9e9e9e'];
+
+const panelStyle = (x, y, dragging) => ({
   position: 'absolute',
-  top: 20,
-  right: 20,
-  width: 280,
-  padding: '20px',
+  top: y,
+  left: x,
+  width: 'clamp(240px, 18vw, 300px)',
+  padding: '1.25rem',
   backgroundColor: 'rgba(30, 30, 30, 0.95)',
-  borderRadius: '12px',
+  borderRadius: '0.75rem',
   boxShadow: '0 6px 16px rgba(0,0,0,0.35)',
   fontFamily: 'Inter, sans-serif',
   color: '#f0f0f0',
-  fontSize: '14px',
+  fontSize: '0.875rem',
   zIndex: 10,
   border: '1px solid #333',
   display: 'flex',
   flexDirection: 'column',
-  gap: '16px'
-};
+  gap: '1rem',
+  cursor: dragging ? 'grabbing' : 'grab',
+  userSelect: 'none'
+});
 
 const inputStyle = {
   width: '100%',
-  padding: '10px 12px',
-  fontSize: '14px',
-  borderRadius: '8px',
+  padding: '0.625rem 0.75rem',
+  fontSize: '0.875rem',
+  borderRadius: '0.5rem',
   border: '1px solid #555',
   backgroundColor: '#2b2b2b',
   color: '#f0f0f0',
@@ -34,34 +37,23 @@ const inputStyle = {
 
 const labelStyle = {
   fontWeight: 600,
-  fontSize: '13px',
-  marginBottom: '6px',
+  fontSize: '0.8rem',
+  marginBottom: '0.25rem',
   display: 'block',
   color: '#ccc'
 };
 
 const buttonStyle = {
-  marginTop: '10px',
-  padding: '10px 14px',
-  fontSize: '13px',
+  padding: '0.625rem 0.875rem',
+  fontSize: '0.8rem',
   fontWeight: 600,
-  borderRadius: '8px',
+  borderRadius: '0.5rem',
   border: 'none',
   backgroundColor: '#444',
   color: '#fff',
   cursor: 'pointer',
   transition: 'background 0.2s ease'
 };
-
-const presetColors = [
-  '#f44336', // Red
-  '#2196f3', // Blue
-  '#4caf50', // Green
-  '#ffeb3b', // Yellow
-  '#9c27b0', // Purple
-  '#9e9e9e'  // Gray
-];
-
 
 export default function ItemEditor({ cube, onUpdate, onShip }) {
   const [item, setItem] = useState({
@@ -74,7 +66,10 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
   });
 
   const [showDetails, setShowDetails] = useState(true);
-  const contentRef = useRef();
+
+  const [position, setPosition] = useState({ x: window.innerWidth - 380, y: 20 });
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     if (cube) {
@@ -96,28 +91,49 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
   };
 
   const handleShip = () => {
-    if (onShip && cube) {
-      onShip(cube);
+    if (onShip && cube) onShip(cube);
+  };
+
+  const handleMouseDown = (e) => {
+    setDragging(true);
+    dragOffset.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (dragging) {
+      setPosition({
+        x: e.clientX - dragOffset.current.x,
+        y: e.clientY - dragOffset.current.y
+      });
     }
   };
+
+  const handleMouseUp = () => setDragging(false);
 
   if (!cube) return null;
 
   return (
-    <div style={panelStyle}>
-      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>
+    <div
+      style={panelStyle(position.x, position.y, dragging)}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
         📝 Edit Cube Info
       </h3>
 
       <div
-        ref={contentRef}
         style={{
           overflow: 'hidden',
           transition: 'max-height 0.4s ease',
           maxHeight: showDetails ? '1000px' : '0px'
         }}
       >
-        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.75rem' }}>
           <div>
             <label style={labelStyle}>🔖 SKU</label>
             <input
@@ -157,7 +173,6 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
               onChange={(e) => {
                 const selected = e.target.value;
                 if (selected === 'custom') {
-                  // If it's currently a preset, switch to default custom color
                   if (presetColors.includes(item.color)) {
                     handleChange('color', '#ffffff');
                   }
@@ -166,7 +181,6 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
                 handleChange('color', selected);
               }}
             >
-
               <option value="#f44336">Red</option>
               <option value="#2196f3">Blue</option>
               <option value="#4caf50">Green</option>
@@ -187,14 +201,12 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
                 style={{
                   ...inputStyle,
                   padding: 0,
-                  height: '40px',
-                  width: '100%',
+                  height: '2.5rem',
                   cursor: 'pointer'
                 }}
               />
             </div>
           )}
-
 
           <div>
             <label style={labelStyle}>⚖️ Weight (kg)</label>
@@ -210,7 +222,7 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
           <div>
             <label style={labelStyle}>🗒️ Notes</label>
             <textarea
-              style={{ ...inputStyle, height: '60px', resize: 'vertical' }}
+              style={{ ...inputStyle, height: '4rem', resize: 'vertical' }}
               placeholder="Enter any special instructions..."
               value={item.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
@@ -219,7 +231,10 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
         </div>
       </div>
 
-      <button style={buttonStyle} onClick={() => setShowDetails(prev => !prev)}>
+      <button
+        style={buttonStyle}
+        onClick={() => setShowDetails(prev => !prev)}
+      >
         {showDetails ? '🔽 Hide Details' : '▶ Show Details'}
       </button>
 

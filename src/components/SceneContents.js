@@ -1,22 +1,21 @@
-// src/components/SceneContents.js
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, TransformControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
 import Cube from './MyCube';
 import Wall from './Walls';
+import { useCameraControls } from '../hooks/useCameraControls';
 
-const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRightClick, snapEnabled, setCubes, setDimensionTargetRef, updateCubes}) => {
+const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRightClick, snapEnabled, setCubes, setDimensionTargetRef, updateCubes }) => {
   const { camera } = useThree();
   const orbitControlsRef = useRef();
   const transformRef = useRef();
   const prevPosRef = useRef(null);
   const isDraggingRef = useRef(false);
-  const pressedKeysRef = useRef({});
   const lowerQuery = searchQuery?.toLowerCase?.();
-  const audio = new Audio('/sounds/pop1.wav');
-  audio.volume = 0.2;
+  const audioRef = useRef(new Audio('/sounds/pop1.wav'));
+  audioRef.current.volume = 0.2;
 
   const BOUNDS = {
     minX: -10,
@@ -41,8 +40,6 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
     };
   };
 
-
-
   const getBoundingBox = (ref, size) => {
     const center = ref.position;
     return {
@@ -54,24 +51,21 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
   };
 
   const EPSILON = 0.1;
+  const boxesOverlap = (a, b) => (
+    a.minX < b.maxX - EPSILON &&
+    a.maxX > b.minX + EPSILON &&
+    a.minZ < b.maxZ - EPSILON &&
+    a.maxZ > b.minZ + EPSILON
+  );
 
-  const boxesOverlap = (a, b) => {
-    return (
-      a.minX < b.maxX - EPSILON &&
-      a.maxX > b.minX + EPSILON &&
-      a.minZ < b.maxZ - EPSILON &&
-      a.maxZ > b.minZ + EPSILON
-    );
-  };
-
-
+  useCameraControls(camera, orbitControlsRef);
 
   useFrame(() => {
     if (isDraggingRef.current && selectedRef?.current) {
       const pos = selectedRef.current.position;
-      const { x, z } = pos
-
-      const selectedSize = cubes.find(c => c.ref.current === selectedRef.current)?.size || [1,1,1];
+      const selectedCube = cubes.find(c => c.ref.current === selectedRef.current);
+      if (!selectedCube) return;
+      const selectedSize = selectedCube.size || [1, 1, 1];
       const selectedBox = getBoundingBox(selectedRef.current, selectedSize);
 
       const stackedBelow = cubes
@@ -83,102 +77,37 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
           return boxesOverlap(selectedBox, otherBox);
         });
 
-
       const maxYBelow = stackedBelow.length
         ? Math.max(...stackedBelow.map(c => c.ref.current.position.y + (c.size?.[1] || 1) / 2))
         : 0;
 
       const finalY = maxYBelow + (selectedSize[1] / 2);
-      selectedRef.current.position.set(x, finalY, z);
-
-      pos.y = THREE.MathUtils.lerp(pos.y, finalY, 0.1);
-    }
-
-    const speed = 0.1;
-    const keys = pressedKeysRef.current;
-    const direction = new THREE.Vector3();
-    const direction2 = new THREE.Vector3();
-    const right = new THREE.Vector3();
-    const moveVector = new THREE.Vector3();
-
-    const moveForward = keys['arrowup'] || keys['w'];
-    const moveBackward = keys['arrowdown'] || keys['s'];
-    const moveLeft = keys['arrowleft'] || keys['a'];
-    const moveRight = keys['arrowright'] || keys['d'];
-    const zoomIn = keys['q'];
-    const zoomOut = keys['e'];
-
-    if (moveForward || moveBackward || moveLeft || moveRight || zoomIn || zoomOut) {
-      camera.getWorldDirection(direction);
-      camera.getWorldDirection(direction2);
-      direction.y = 0;
-      direction.normalize();
-      direction2.normalize();
-
-      right.crossVectors(direction, camera.up).normalize();
-      if (moveForward) moveVector.add(direction);
-      if (moveBackward) moveVector.sub(direction);
-      if (moveLeft) moveVector.sub(right);
-      if (moveRight) moveVector.add(right);
-      
-      moveVector.normalize().multiplyScalar(speed);
-      if (zoomIn) camera.position.add(direction2.clone().multiplyScalar(speed));
-      if (zoomOut) camera.position.sub(direction2.clone().multiplyScalar(speed));
-
-      camera.position.add(moveVector);
-      orbitControlsRef.current.target.add(moveVector);
-      orbitControlsRef.current.update();
+      selectedRef.current.position.set(pos.x, finalY, pos.z);
     }
   });
 
   useEffect(() => {
-    const isTyping = () => {
-      const active = document.activeElement;
-      return active && ['INPUT', 'TEXTAREA'].includes(active.tagName);
-    };
-
     const handleKeyDown = (e) => {
-      if (isTyping()) return;
-      const key = e.key.toLowerCase();
-      if ([
-        'arrowup', 'arrowdown', 'arrowleft', 'arrowright',
-        'w', 'a', 's', 'd', 'q', 'e'
-      ].includes(key)) {
-        e.preventDefault();
-        pressedKeysRef.current[key] = true;
-      }
+      const active = document.activeElement;
+      if (active && ['INPUT', 'TEXTAREA'].includes(active.tagName)) return;
     };
-
-    const handleKeyUp = (e) => {
-      const key = e.key.toLowerCase();
-      if ([
-        'arrowup', 'arrowdown', 'arrowleft', 'arrowright',
-        'w', 'a', 's', 'd', 'q', 'e'
-      ].includes(key)) {
-        pressedKeysRef.current[key] = false;
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const warehouseBounds = { width: 20, depth: 20, height: 5 };
-  const wallSegments = [];
-
-  for (let x = -warehouseBounds.width / 2 + 0.5; x < warehouseBounds.width / 2; x++) {
-    wallSegments.push({ id: `front-${x}`, position: [x, 1, -warehouseBounds.depth / 2], size: [1, 2, 0.2] });
-    wallSegments.push({ id: `back-${x}`, position: [x, 1, warehouseBounds.depth / 2], size: [1, 2, 0.2] });
-  }
-  for (let z = -warehouseBounds.depth / 2 + 0.5; z < warehouseBounds.depth / 2; z++) {
-    wallSegments.push({ id: `left-${z}`, position: [-warehouseBounds.width / 2, 1, z], size: [0.2, 2, 1] });
-    wallSegments.push({ id: `right-${z}`, position: [warehouseBounds.width / 2, 1, z], size: [0.2, 2, 1] });
-  }
+  const wallSegments = useMemo(() => {
+    const segments = [];
+    for (let x = -warehouseBounds.width / 2 + 0.5; x < warehouseBounds.width / 2; x++) {
+      segments.push({ id: `front-${x}`, position: [x, 1, -warehouseBounds.depth / 2], size: [1, 2, 0.2] });
+      segments.push({ id: `back-${x}`, position: [x, 1, warehouseBounds.depth / 2], size: [1, 2, 0.2] });
+    }
+    for (let z = -warehouseBounds.depth / 2 + 0.5; z < warehouseBounds.depth / 2; z++) {
+      segments.push({ id: `left-${z}`, position: [-warehouseBounds.width / 2, 1, z], size: [0.2, 2, 1] });
+      segments.push({ id: `right-${z}`, position: [warehouseBounds.width / 2, 1, z], size: [0.2, 2, 1] });
+    }
+    return segments;
+  }, []);
 
   return (
     <>
@@ -195,7 +124,7 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
         rotation={[-Math.PI / 2, 0, 0]}
         onClick={() => {
           setSelectedRef(null);
-          setDimensionTargetRef?.(null); 
+          setDimensionTargetRef?.(null);
         }}
       >
         <planeGeometry args={[100, 100]} />
@@ -213,7 +142,7 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
             onRightClick={onRightClick}
             isSelected={cube.ref.current === selectedRef?.current}
             label={cube.item?.sku || ''}
-            color={match ? '#00ccff' : cube.item?.color || '#ffffff' }
+            color={match ? '#00ccff' : cube.item?.color || '#ffffff'}
             item={cube.item}
             size={cube.size || [1, 1, 1]}
           />
@@ -242,9 +171,9 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
             isDraggingRef.current = false;
 
             const pos = selectedRef.current.position;
-            const selectedSize = cubes.find(c => c.ref.current === selectedRef.current)?.size || [1, 1, 1];
+            const selectedCube = cubes.find(c => c.ref.current === selectedRef.current);
+            const selectedSize = selectedCube?.size || [1, 1, 1];
 
-            // 🔁 Snap the position
             const raw = snapEnabled
               ? getSnappedPosition(pos, selectedSize)
               : {
@@ -253,12 +182,8 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
                 };
 
             const { x, z } = raw;
-
-
-            // 🔁 Set snapped position first (without Y)
             selectedRef.current.position.set(x, pos.y, z);
 
-            // ✅ NOW calculate bounding box with new snapped position
             const selectedBox = {
               minX: x - selectedSize[0] / 2,
               maxX: x + selectedSize[0] / 2,
@@ -266,11 +191,9 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
               maxZ: z + selectedSize[2] / 2,
             };
 
-            // 📦 Check for stacked objects below AFTER snapping
             const stackedBelow = cubes.filter(c => {
               const ref = c.ref.current;
               if (!ref || ref === selectedRef.current) return false;
-
               const otherBox = getBoundingBox(ref, c.size || [1, 1, 1]);
               return boxesOverlap(selectedBox, otherBox);
             });
@@ -280,13 +203,10 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
               : 0;
 
             const finalY = maxYBelow + (selectedSize[1] / 2);
-
-            // ✅ Apply final position
             selectedRef.current.position.set(x, finalY, z);
 
-            audio.play();
+            audioRef.current.play();
 
-            // 🧠 Update state
             updateCubes(prev =>
               prev.map(c =>
                 c.ref === selectedRef
