@@ -121,7 +121,7 @@ const Toolbar = ({
                 <input
                   type="number"
                   name="width"
-                  min="0.1"
+                  min="1"
                   value={localBounds.width}
                   onChange={handleBoundChange}
                   style={{ ...inputStyle, width: '100%' }}
@@ -131,7 +131,7 @@ const Toolbar = ({
                 <input
                   type="number"
                   name="depth"
-                  min="0.1"
+                  min="1"
                   value={localBounds.depth}
                   onChange={handleBoundChange}
                   style={{ ...inputStyle, width: '100%' }}

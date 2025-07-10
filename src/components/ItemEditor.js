@@ -100,7 +100,7 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
     const rect = panelRef.current.getBoundingClientRect();
     const panelWidth = rect.width;
     const panelHeight = rect.height;
-    const padding = 16;
+    const padding = 5;
 
     const rawX = e.clientX - dragOffset.current.x;
     const rawY = e.clientY - dragOffset.current.y;

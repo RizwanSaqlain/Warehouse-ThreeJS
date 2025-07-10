@@ -40,13 +40,30 @@ const LayoutSwitcher = ({
   // Move container
   const handleMouseMove = (e) => {
     if (!dragging.current) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const containerWidth = container.offsetWidth;
+    const containerHeight = container.offsetHeight;
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+
+    const newLeft = e.clientX - offset.current.x;
+    const newTop = e.clientY - offset.current.y;
+
+    const clampedLeft = Math.max(0, Math.min(screenWidth - containerWidth, newLeft));
+    const clampedTop = Math.max(0, Math.min(screenHeight - containerHeight, newTop));
+
     const newPos = {
-      left: e.clientX - offset.current.x,
-      top: e.clientY - offset.current.y,
+        left: clampedLeft,
+        top: clampedTop,
     };
+
     setPosition(newPos);
     localStorage.setItem('layout_ui_position', JSON.stringify(newPos));
-  };
+    };
+
 
   // Stop dragging
   const handleMouseUp = () => {
