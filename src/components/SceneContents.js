@@ -7,7 +7,7 @@ import Cube from './MyCube';
 import Wall from './Walls';
 import { useCameraControls } from '../hooks/useCameraControls';
 
-const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRightClick, snapEnabled, setCubes, setDimensionTargetRef, updateCubes }) => {
+const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRightClick, snapEnabled, setCubes, setDimensionTargetRef, updateCubes, bounds = { width: 20, depth: 20, height: 5 }}) => {
   const { camera } = useThree();
   const orbitControlsRef = useRef();
   const transformRef = useRef();
@@ -18,10 +18,10 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
   audioRef.current.volume = 0.2;
 
   const BOUNDS = {
-    minX: -10,
-    maxX: 10,
-    minZ: -10,
-    maxZ: 10
+    minX: -bounds.width / 2,
+    maxX: bounds.width / 2,
+    minZ: -bounds.depth / 2,
+    maxZ: bounds.depth / 2,
   };
 
   const gridSnap = (value) => Math.round(value - 0.5) + 0.5;
@@ -98,16 +98,17 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
   const warehouseBounds = { width: 20, depth: 20, height: 5 };
   const wallSegments = useMemo(() => {
     const segments = [];
-    for (let x = -warehouseBounds.width / 2 + 0.5; x < warehouseBounds.width / 2; x++) {
-      segments.push({ id: `front-${x}`, position: [x, 1, -warehouseBounds.depth / 2], size: [1, 2, 0.2] });
-      segments.push({ id: `back-${x}`, position: [x, 1, warehouseBounds.depth / 2], size: [1, 2, 0.2] });
+    for (let x = -bounds.width / 2 + 0.5; x < bounds.width / 2; x++) {
+      segments.push({ id: `front-${x}`, position: [x, 1, -bounds.depth / 2], size: [1, 2, 0.2] });
+      segments.push({ id: `back-${x}`, position: [x, 1, bounds.depth / 2], size: [1, 2, 0.2] });
     }
-    for (let z = -warehouseBounds.depth / 2 + 0.5; z < warehouseBounds.depth / 2; z++) {
-      segments.push({ id: `left-${z}`, position: [-warehouseBounds.width / 2, 1, z], size: [0.2, 2, 1] });
-      segments.push({ id: `right-${z}`, position: [warehouseBounds.width / 2, 1, z], size: [0.2, 2, 1] });
+    for (let z = -bounds.depth / 2 + 0.5; z < bounds.depth / 2; z++) {
+      segments.push({ id: `left-${z}`, position: [-bounds.width / 2, 1, z], size: [0.2, 2, 1] });
+      segments.push({ id: `right-${z}`, position: [bounds.width / 2, 1, z], size: [0.2, 2, 1] });
     }
     return segments;
-  }, []);
+  }, [bounds]);
+
 
   return (
     <>

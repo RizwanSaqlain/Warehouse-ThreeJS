@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 const Toolbar = ({
   onAdd,
@@ -13,12 +13,19 @@ const Toolbar = ({
   showMapView,
   setShowMapView,
   toggleMusic,
-  musicOn
+  musicOn,
+  onBoundsChange,
+  bounds
 }) => {
   const [dragging, setDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 20, y: 20 });
+  const [position, setPosition] = useState({ x: 20 , y: 20 });
   const dragOffset = useRef({ x: 0, y: 0 });
   const [musicPlaying, setMusicPlaying] = useState(true);
+  const [localBounds, setLocalBounds] = useState({ ...bounds });
+  const fileInputRef = useRef(null);
+  const toolbarRef = useRef(null);
+
+
 
   const handleMouseDown = (e) => {
     setDragging(true);
@@ -29,24 +36,49 @@ const Toolbar = ({
   };
 
   const handleMouseMove = (e) => {
-    if (dragging) {
-      setPosition({
-        x: e.clientX - dragOffset.current.x,
-        y: e.clientY - dragOffset.current.y,
-      });
-    }
+    if (!dragging) return;
+
+    const newX = e.clientX - dragOffset.current.x;
+    const newY = e.clientY - dragOffset.current.y;
+
+    const toolbarWidth = toolbarRef.current?.offsetWidth || 300;
+    const toolbarHeight = toolbarRef.current?.offsetHeight || 400;
+
+    const padding = 5;
+
+    const maxX = window.innerWidth - padding - toolbarWidth;
+    const maxY = window.innerHeight - padding - toolbarHeight;
+
+    const clampedX = Math.max(padding, Math.min(newX, maxX));
+    const clampedY = Math.max(padding, Math.min(newY, maxY));
+
+    setPosition({ x: clampedX, y: clampedY });
   };
 
+
   const handleMouseUp = () => setDragging(false);
+  
+  const handleBoundChange = (e) => {
+    const { name, value } = e.target;
+    const newBounds = { ...localBounds, [name]: Math.max(0, Number(value)) };
+    setLocalBounds(newBounds);
+    onBoundsChange?.(newBounds); // update parent
+  };
+
+  useEffect(() => {
+    setLocalBounds(bounds);
+  }, [bounds]);
 
 
   return (
     <div
+      ref={toolbarRef}
       style={toolbarStyle(position.x, position.y, dragging)}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
+
       <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>
         📦 Warehouse Tools
       </h3>
@@ -69,17 +101,46 @@ const Toolbar = ({
           📤 Export Layout
         </button>
 
-        <label style={labelStyle}>
+        <>
+        <button onClick={() => fileInputRef.current.click()} style={buttonStyle('#ff9800')}>
           📥 Import Layout
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            style={fileInputStyle}
-          />
-        </label>
+        </button>
+        <input
+          type="file"
+          accept=".json"
+          ref={fileInputRef}
+          onChange={handleImport}
+          style={{ display: 'none' }}
+        />
+      </>
       </div>
 
+            <div style={sectionStyle}>
+              <label style={labelStyle}>📐 Set Warehouse Bounds</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input
+                  type="number"
+                  name="width"
+                  min="0.1"
+                  value={localBounds.width}
+                  onChange={handleBoundChange}
+                  style={{ ...inputStyle, width: '100%' }}
+                  placeholder="Width"
+                />
+                <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>×</span>
+                <input
+                  type="number"
+                  name="depth"
+                  min="0.1"
+                  value={localBounds.depth}
+                  onChange={handleBoundChange}
+                  style={{ ...inputStyle, width: '100%' }}
+                  placeholder="Depth"
+                />
+              </div>
+            </div>
+
+      <label style={labelStyle}>Search Containers
       <input
         type="text"
         placeholder="🔍 Search SKU or Category..."
@@ -87,6 +148,7 @@ const Toolbar = ({
         onChange={(e) => setSearchQuery(e.target.value)}
         style={inputStyle}
       />
+      </label>
 
       <label style={checkboxLabelStyle}>
         <input
@@ -129,6 +191,7 @@ const toolbarStyle = (x, y, dragging) => ({
   cursor: dragging ? 'grabbing' : 'grab',
   userSelect: 'none',
 });
+
 
 const sectionStyle = {
   display: 'flex',
@@ -183,5 +246,6 @@ const buttonStyle = (bg, disabled = false) => ({
   opacity: disabled ? 0.5 : 1,
   transition: 'background 0.3s ease',
 });
+
 
 export default Toolbar;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const hintStyles = {
   container: {
@@ -14,7 +14,6 @@ const hintStyles = {
     lineHeight: '1.4',
     boxShadow: '0 0 10px rgba(0,0,0,0.3)',
     maxWidth: '500px',
-    pointerEvents: 'none',
     userSelect: 'none',
   },
   key: {
@@ -27,18 +26,46 @@ const hintStyles = {
     fontWeight: 'bold',
     fontSize: '12px',
   },
+  toggleButton: {
+    marginTop: '0.5rem',
+    marginBottom: '0.5rem',
+    background: '#444',
+    color: '#fff',
+    fontSize: '12px',
+    padding: '4px 8px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    pointerEvents: 'auto',
+  },
 };
 
 const Key = ({ children }) => <span style={hintStyles.key}>{children}</span>;
 
 export default function ControlsHint() {
+  const [visible, setVisible] = useState(true);
+
   return (
     <div style={hintStyles.container}>
-      <div><Key>W</Key><Key>A</Key><Key>S</Key><Key>D</Key> / <Key>↑</Key><Key>↓</Key><Key>←</Key><Key>→</Key> — Move Camera</div>
-      <div><Key>Q</Key><Key>E</Key> — Zoom In/Out</div>
-      <div><Key>Ctrl</Key>+ <Key>Z</Key> — Undo </div>
-      <div><Key>Ctrl</Key>+ <Key>Y</Key> — Redo </div>
-      <div>Right Click Container to Edit Dimensions</div>
+      {visible && (
+        <>
+          <div>
+            <Key>W</Key><Key>A</Key><Key>S</Key><Key>D</Key> / <Key>↑</Key><Key>↓</Key><Key>←</Key><Key>→</Key> — Move Camera
+          </div>
+          <div><Key>Q</Key><Key>E</Key> — Zoom In/Out</div>
+          <div><Key>Ctrl</Key>+<Key>Z</Key> — Undo</div>
+          <div><Key>Ctrl</Key>+<Key>Y</Key> — Redo</div>
+          <div><Key>Ctrl</Key>+<Key>C</Key> — Copy</div>
+          <div><Key>Ctrl</Key>+<Key>V</Key> — Paste</div>
+          <div>Right Click Container to Edit Dimensions</div>
+        </>
+      )}
+      <button
+        onClick={() => setVisible(!visible)}
+        style={hintStyles.toggleButton}
+      >
+        {visible ? 'Hide Controls' : 'Show Controls'}
+      </button>
     </div>
   );
 }

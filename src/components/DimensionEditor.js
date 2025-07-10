@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const DimensionEditor = ({
   refTarget,
@@ -8,42 +8,73 @@ const DimensionEditor = ({
   item = {},
 }) => {
   const sku = item.sku || 'Unnamed';
-  const [dragging, setDragging] = useState(false);
-  const [position, setPosition] = useState(() => {
-    const panelWidth = 300;
-    const panelHeight = 280;
-    const x = Math.min(window.innerWidth - panelWidth - 20, window.innerWidth * 0.85);
-    const y = Math.min(window.innerHeight - panelHeight - 20, window.innerHeight * 0.67);
+  const draggingRef = useRef(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const panelRef = useRef(null);
+
+
+  const defaultPosition = () => {
+    const padding = 10;
+    const panelWidth = panelRef.current?.offsetWidth || 300;
+    const panelHeight = panelRef.current?.offsetHeight || 280;
+    const x = Math.min(window.innerWidth - panelWidth - padding, window.innerWidth * 0.85);
+    const y = Math.min(window.innerHeight - panelHeight - padding, window.innerHeight * 0.67);
     return { x, y };
+  };
+
+
+  const [position, setPosition] = useState(() => {
+    const saved = localStorage.getItem('dimensionEditorPosition');
+    return saved ? JSON.parse(saved) : defaultPosition();
   });
 
-  const dragOffset = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!draggingRef.current) return;
+
+      const rect = panelRef.current.getBoundingClientRect();
+      const panelWidth = rect.width;
+      const panelHeight = rect.height;
+      const padding = 5;
+
+      const x = e.clientX - dragOffset.current.x;
+      const y = e.clientY - dragOffset.current.y;
+
+      const clampedX = Math.max(padding, Math.min(x, window.innerWidth - panelWidth - padding));
+      const clampedY = Math.max(padding, Math.min(y, window.innerHeight - panelHeight - padding));
+
+      const newPos = { x: clampedX, y: clampedY };
+      setPosition(newPos);
+      localStorage.setItem('dimensionEditorPosition', JSON.stringify(newPos));
+    };
+
+
+    const handleMouseUp = () => {
+      draggingRef.current = false;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   if (!refTarget?.current) return null;
 
-  
-  
-
   const handleMouseDown = (e) => {
-    setDragging(true);
+    draggingRef.current = true;
     dragOffset.current = {
       x: e.clientX - position.x,
       y: e.clientY - position.y,
     };
   };
 
-  const handleMouseMove = (e) => {
-    if (dragging) {
-      setPosition({
-        x: e.clientX - dragOffset.current.x,
-        y: e.clientY - dragOffset.current.y,
-      });
-    }
-  };
-
-  const handleMouseUp = () => setDragging(false);
-
   return (
     <div
+      ref={panelRef}
       style={{
         position: 'absolute',
         left: position.x,
@@ -60,12 +91,10 @@ const DimensionEditor = ({
         display: 'flex',
         flexDirection: 'column',
         gap: '1rem',
-        cursor: dragging ? 'grabbing' : 'grab',
+        cursor: draggingRef.current ? 'grabbing' : 'grab',
         userSelect: 'none',
       }}
       onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
     >
       <h3
         style={{

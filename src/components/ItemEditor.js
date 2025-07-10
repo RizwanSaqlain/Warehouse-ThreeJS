@@ -56,20 +56,12 @@ const buttonStyle = {
 };
 
 export default function ItemEditor({ cube, onUpdate, onShip }) {
-  const [item, setItem] = useState({
-    sku: '',
-    quantity: '',
-    category: '',
-    weight: '',
-    notes: '',
-    color: '#ffffff'
-  });
-
+  const [item, setItem] = useState({ sku: '', quantity: '', category: '', weight: '', notes: '', color: '#ffffff' });
   const [showDetails, setShowDetails] = useState(true);
-
   const [position, setPosition] = useState({ x: window.innerWidth - 380, y: 20 });
   const dragOffset = useRef({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const panelRef = useRef(null);
 
   useEffect(() => {
     if (cube) {
@@ -103,12 +95,20 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
   };
 
   const handleMouseMove = (e) => {
-    if (dragging) {
-      setPosition({
-        x: e.clientX - dragOffset.current.x,
-        y: e.clientY - dragOffset.current.y
-      });
-    }
+    if (!dragging || !panelRef.current) return;
+
+    const rect = panelRef.current.getBoundingClientRect();
+    const panelWidth = rect.width;
+    const panelHeight = rect.height;
+    const padding = 16;
+
+    const rawX = e.clientX - dragOffset.current.x;
+    const rawY = e.clientY - dragOffset.current.y;
+
+    const x = Math.min(Math.max(padding, rawX), window.innerWidth - panelWidth - padding);
+    const y = Math.min(Math.max(padding, rawY), window.innerHeight - panelHeight - padding);
+
+    setPosition({ x, y });
   };
 
   const handleMouseUp = () => setDragging(false);
@@ -117,14 +117,13 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
 
   return (
     <div
+      ref={panelRef}
       style={panelStyle(position.x, position.y, dragging)}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
-        📝 Edit Cube Info
-      </h3>
+      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>📝 Edit Cube Info</h3>
 
       <div
         style={{
@@ -134,37 +133,9 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.75rem' }}>
-          <div>
-            <label style={labelStyle}>🔖 SKU</label>
-            <input
-              style={inputStyle}
-              placeholder="e.g. A12345"
-              value={item.sku}
-              onChange={(e) => handleChange('sku', e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>📦 Quantity</label>
-            <input
-              style={inputStyle}
-              type="number"
-              placeholder="e.g. 100"
-              value={item.quantity}
-              onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)}
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>📁 Category</label>
-            <input
-              style={inputStyle}
-              placeholder="e.g. Electronics"
-              value={item.category}
-              onChange={(e) => handleChange('category', e.target.value)}
-            />
-          </div>
-
+          <div><label style={labelStyle}>🔖 SKU</label><input style={inputStyle} value={item.sku} onChange={(e) => handleChange('sku', e.target.value)} /></div>
+          <div><label style={labelStyle}>📦 Quantity</label><input type="number" style={inputStyle} value={item.quantity} onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)} /></div>
+          <div><label style={labelStyle}>📁 Category</label><input style={inputStyle} value={item.category} onChange={(e) => handleChange('category', e.target.value)} /></div>
           <div>
             <label style={labelStyle}>🎨 Color</label>
             <select
@@ -173,9 +144,7 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
               onChange={(e) => {
                 const selected = e.target.value;
                 if (selected === 'custom') {
-                  if (presetColors.includes(item.color)) {
-                    handleChange('color', '#ffffff');
-                  }
+                  if (presetColors.includes(item.color)) handleChange('color', '#ffffff');
                   return;
                 }
                 handleChange('color', selected);
@@ -190,7 +159,6 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
               <option value="custom">Custom</option>
             </select>
           </div>
-
           {!presetColors.includes(item.color) && (
             <div>
               <label style={labelStyle}>🎨 Custom Color</label>
@@ -198,50 +166,20 @@ export default function ItemEditor({ cube, onUpdate, onShip }) {
                 type="color"
                 value={item.color || '#ffffff'}
                 onChange={(e) => handleChange('color', e.target.value)}
-                style={{
-                  ...inputStyle,
-                  padding: 0,
-                  height: '2.5rem',
-                  cursor: 'pointer'
-                }}
+                style={{ ...inputStyle, padding: 0, height: '2.5rem', cursor: 'pointer' }}
               />
             </div>
           )}
-
-          <div>
-            <label style={labelStyle}>⚖️ Weight (kg)</label>
-            <input
-              style={inputStyle}
-              type="number"
-              placeholder="e.g. 2.5"
-              value={item.weight}
-              onChange={(e) => handleChange('weight', parseFloat(e.target.value) || '')}
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>🗒️ Notes</label>
-            <textarea
-              style={{ ...inputStyle, height: '4rem', resize: 'vertical' }}
-              placeholder="Enter any special instructions..."
-              value={item.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-            />
-          </div>
+          <div><label style={labelStyle}>⚖️ Weight (kg)</label><input type="number" style={inputStyle} value={item.weight} onChange={(e) => handleChange('weight', parseFloat(e.target.value) || '')} /></div>
+          <div><label style={labelStyle}>🗒️ Notes</label><textarea style={{ ...inputStyle, height: '4rem', resize: 'vertical' }} placeholder="Enter any special instructions..." value={item.notes} onChange={(e) => handleChange('notes', e.target.value)} /></div>
         </div>
       </div>
 
-      <button
-        style={buttonStyle}
-        onClick={() => setShowDetails(prev => !prev)}
-      >
+      <button style={buttonStyle} onClick={() => setShowDetails(prev => !prev)}>
         {showDetails ? '🔽 Hide Details' : '▶ Show Details'}
       </button>
 
-      <button
-        style={{ ...buttonStyle, backgroundColor: '#2e7d32' }}
-        onClick={handleShip}
-      >
+      <button style={{ ...buttonStyle, backgroundColor: '#2e7d32' }} onClick={handleShip}>
         🚚 Ship Item
       </button>
     </div>

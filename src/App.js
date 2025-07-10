@@ -6,6 +6,8 @@ import Toolbar from './components/Toolbar';
 import DimensionEditor from './components/DimensionEditor';
 import TopDownMapView from './components/TopDownMapView';
 import ControlsHint from './components/ControlsHint';
+import LayoutSwitcher from './components/LayoutSwitcher';
+
 
 export default function App() {
   const [cubes, setCubes] = useState([{
@@ -34,6 +36,12 @@ export default function App() {
   const [showMapView, setShowMapView] = useState(false);
   const audioRef = useRef(null);
   const [musicOn, setMusicOn] = useState(true);
+  const [copiedCube, setCopiedCube] = useState(null);
+  const [bounds, setBounds] = useState({ width: 20, depth: 20, height: 5 });
+  const [layouts, setLayouts] = useState([]); // [{ name: 'Layout 1', cubes: [...], bounds: {...} }]
+  const [currentLayoutIndex, setCurrentLayoutIndex] = useState(0);
+
+
 
   const applyCubesUpdate = useCallback((updaterFn) => {
     setCubes((prevCubes) => {
@@ -123,58 +131,131 @@ export default function App() {
   }, [cubes, selectedRef]);
 
   const handleExport = useCallback(() => {
-    requestIdleCallback(() => {
-      const exportData = cubes.map(cube => ({
+    const exportData = {
+      cubes: cubes.map(cube => ({
         id: cube.id,
         position: cube.ref.current?.position.toArray() || cube.position,
         size: cube.size,
         item: cube.item
-      }));
+      })),
+      bounds
+    };
 
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'warehouse-layout.json';
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-  }, [cubes]);
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'warehouse-layout.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [cubes, bounds]);
+
+
 
   const handleImport = useCallback((e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
+    const reader = new FileReader(); // ✅ declare before usage
+
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target.result);
-        const importedCubes = json.map(cube => ({ ...cube, ref: React.createRef() }));
-        applyCubesUpdate(() => importedCubes);
+        console.log('Imported JSON:', json); // 🔍 debug log
+
+        const name = file.name.replace('.json', '');
+
+        let cubesData = [];
+        let boundsData = { width: 20, depth: 20, height: 5 };
+
+        if (Array.isArray(json)) {
+          cubesData = json; // legacy array-only format
+        } else if (json && typeof json === 'object') {
+          cubesData = Array.isArray(json.cubes) ? json.cubes : [];
+          boundsData = json.bounds || boundsData;
+        }
+
+        if (cubesData.length === 0) {
+          alert('Invalid layout: no cubes found');
+          return;
+        }
+
+        const cubes = cubesData.map(cube => ({
+          ...cube,
+          ref: React.createRef()
+        }));
+        
+
+        const newLayout = { name, cubes, bounds: boundsData };
+        setLayouts((prev) => {
+          const updated = [...prev, newLayout];
+          localStorage.setItem('warehouse_layouts', JSON.stringify(updated));
+          return updated;
+        });
+        setCurrentLayoutIndex(prev => prev + 1);
       } catch (err) {
-        alert('Failed to import JSON: ' + err.message);
+        alert('Failed to import layout: ' + err.message);
       }
     };
+
     reader.readAsText(file);
-  }, [applyCubesUpdate]);
+  }, []);
+
+
+
 
   useEffect(() => {
     let lastKeyTime = 0;
     const handleKeyDown = (e) => {
       const now = Date.now();
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && now - lastKeyTime > 300) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && now - lastKeyTime > 50) {
         undoCubes();
         lastKeyTime = now;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && now - lastKeyTime > 300) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && now - lastKeyTime > 50) {
         redoCubes();
         lastKeyTime = now;
       }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && now - lastKeyTime > 50) {
+        const cube = cubes.find(c => c.ref.current === selectedRef?.current);
+        if (cube) setCopiedCube({ ...cube, id: Date.now() }); // fresh ID
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && copiedCube && now - lastKeyTime > 50) {
+        const newRef = React.createRef();
+        const offsetPos = [
+          copiedCube.position[0] + 1,
+          copiedCube.position[1],
+          copiedCube.position[2] + 1
+        ];
+
+        const newCube = {
+          ...copiedCube,
+          id: Date.now(),
+          ref: newRef,
+          position: offsetPos
+        };
+
+        applyCubesUpdate(prev => [...prev, newCube]);
+
+        // Wait until the ref is populated and the position is correctly applied
+        const waitForPosition = () => {
+          const mesh = newRef.current;
+          if (mesh && mesh.position && mesh.position.toArray().toString() === offsetPos.toString()) {
+            setSelectedRef(newRef);
+          } else {
+            requestAnimationFrame(waitForPosition);
+          }
+        };
+        requestAnimationFrame(waitForPosition);
+      }
+
+
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undoCubes, redoCubes]);
+  }, [undoCubes, redoCubes, copiedCube, cubes, selectedRef, applyCubesUpdate]);
 
   useEffect(() => {
     const audio = new Audio('/sounds/background_music.mp3');
@@ -188,6 +269,46 @@ export default function App() {
       audio.src = '';
     };
   }, []);
+
+  useEffect(() => {
+    const layout = layouts[currentLayoutIndex];
+    if (layout) {
+      setCubes(layout.cubes || []);
+      setBounds(layout.bounds || { width: 20, depth: 20, height: 5 });
+    }
+  }, [layouts, currentLayoutIndex]);
+
+  useEffect(() => {
+    const savedLayouts = localStorage.getItem('warehouse_layouts');
+    if (savedLayouts) {
+      try {
+        const parsed = JSON.parse(savedLayouts);
+        setLayouts(parsed);
+      } catch (e) {
+        console.warn('Failed to parse saved layouts:', e);
+      }
+    }
+  }, []);
+
+
+  useEffect(() => {
+    // Skip update if layouts are not loaded or current index is out of bounds
+    if (!layouts.length || currentLayoutIndex >= layouts.length) return;
+
+    const updatedLayouts = [...layouts];
+    updatedLayouts[currentLayoutIndex] = {
+      ...updatedLayouts[currentLayoutIndex],
+      cubes,
+      bounds,
+    };
+    setLayouts(updatedLayouts);
+    localStorage.setItem('warehouse_layouts', JSON.stringify(updatedLayouts));
+  }, [cubes, bounds]);
+
+
+
+
+
 
   const toggleMusic = useCallback(() => {
     if (!audioRef.current) return;
@@ -219,6 +340,8 @@ export default function App() {
         showMapView={showMapView}
         toggleMusic={toggleMusic}
         musicOn={musicOn}
+        bounds={bounds}
+        onBoundsChange={(newBounds) => setBounds(prev => ({ ...prev, ...newBounds }))}
       />
 
       <Canvas camera={cameraSettings} shadows>
@@ -231,6 +354,7 @@ export default function App() {
           snapEnabled={snapEnabled}
           setDimensionTargetRef={setDimensionTargetRef}
           updateCubes={applyCubesUpdate}
+          bounds={bounds}
         />
       </Canvas>
 
@@ -253,8 +377,18 @@ export default function App() {
           cubes={cubes}
           selectedRef={selectedRef}
           onClose={() => setShowMapView(false)}
+          bounds={bounds}
         />
       )}
+
+      <LayoutSwitcher
+        layouts={layouts}
+        currentLayoutIndex={currentLayoutIndex}
+        setCurrentLayoutIndex={setCurrentLayoutIndex}
+        setLayouts={setLayouts}
+      />
+
+
     </>
   );
 }

@@ -10,9 +10,20 @@ export function useCameraControls(camera, orbitControlsRef) {
     const baseSpeed = 8; // units per second
     let lastTime = performance.now();
 
+    const isTyping = () => {
+      const el = document.activeElement;
+      return el && (
+        el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.isContentEditable
+      );
+    };
+
     const handleFrame = () => {
+      if (isTyping()) return;
+
       const now = performance.now();
-      const delta = (now - lastTime) / 1000; // seconds
+      const delta = (now - lastTime) / 1000;
       lastTime = now;
 
       if (!Object.values(keys).some(Boolean)) return;
