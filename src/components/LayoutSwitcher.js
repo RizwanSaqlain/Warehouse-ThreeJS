@@ -56,14 +56,13 @@ const LayoutSwitcher = ({
     const clampedTop = Math.max(0, Math.min(screenHeight - containerHeight, newTop));
 
     const newPos = {
-        left: clampedLeft,
-        top: clampedTop,
+      left: clampedLeft,
+      top: clampedTop,
     };
 
     setPosition(newPos);
     localStorage.setItem('layout_ui_position', JSON.stringify(newPos));
-    };
-
+  };
 
   // Stop dragging
   const handleMouseUp = () => {
@@ -87,6 +86,16 @@ const LayoutSwitcher = ({
       setCurrentLayoutIndex((prev) => prev - 1);
     }
   };
+
+  // For smooth unmount, keep content mounted for animation duration
+  const [shouldRender, setShouldRender] = useState(showUI);
+  useEffect(() => {
+    if (showUI) setShouldRender(true);
+    else {
+      const timeout = setTimeout(() => setShouldRender(false), 400); // match transition duration
+      return () => clearTimeout(timeout);
+    }
+  }, [showUI]);
 
   if (layouts.length <= 1 && !showUI) return null;
 
@@ -116,30 +125,37 @@ const LayoutSwitcher = ({
         </button>
       </div>
 
-      {showUI && (
-        <>
-          <label style={labelStyle}>Active Layout:</label>
-          <div style={rowStyle}>
-            <select
-              value={currentLayoutIndex}
-              onChange={(e) => setCurrentLayoutIndex(Number(e.target.value))}
-              style={selectStyle}
-            >
-              {layouts.map((layout, index) => (
-                <option key={index} value={index}>
-                  {layout.name || `Layout ${index + 1}`}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => handleRemove(currentLayoutIndex)}
-              style={buttonStyle('#f44336')}
-            >
-              🗑 Remove
-            </button>
+      <div
+        style={{
+          ...switcherContentStyle,
+          ...(showUI ? {} : switcherContentHiddenStyle),
+        }}
+      >
+        {shouldRender && (
+          <div>
+            <label style={labelStyle}>Active Layout:</label>
+            <div style={rowStyle}>
+              <select
+                value={currentLayoutIndex}
+                onChange={(e) => setCurrentLayoutIndex(Number(e.target.value))}
+                style={selectStyle}
+              >
+                {layouts.map((layout, index) => (
+                  <option key={index} value={index}>
+                    {layout.name || `Layout ${index + 1}`}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleRemove(currentLayoutIndex)}
+                style={buttonStyle('#f44336')}
+              >
+                🗑 Remove
+              </button>
+            </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 };
@@ -166,6 +182,22 @@ const headerStyle = {
   justifyContent: 'space-between',
   alignItems: 'center',
   cursor: 'move',
+};
+
+const switcherContentStyle = {
+  transition: 'max-height 0.4s cubic-bezier(.4,2,.6,1), opacity 0.3s, transform 0.3s',
+  overflow: 'hidden',
+  maxHeight: 500,
+  opacity: 1,
+  transform: 'scaleY(1)',
+  pointerEvents: 'auto',
+};
+
+const switcherContentHiddenStyle = {
+  maxHeight: 0,
+  opacity: 0,
+  transform: 'scaleY(0.95)',
+  pointerEvents: 'none',
 };
 
 const labelStyle = {

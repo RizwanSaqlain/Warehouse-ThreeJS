@@ -206,7 +206,7 @@ export default function App() {
 
   const generateDemoCubes = useCallback(() => {
     const { width, depth } = bounds;
-    const aisleWidth = 1; // Walking space between containers
+    const aisleWidth = 1.0; // Walking space between containers
     const minSize = 1.2;
     const maxSize = 3.2;
     let id = 1;

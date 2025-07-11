@@ -15,6 +15,21 @@ const hintStyles = {
     boxShadow: '0 0 10px rgba(0,0,0,0.3)',
     maxWidth: '500px',
     userSelect: 'none',
+    zIndex: 100,
+  },
+  content: {
+    transition: 'max-height 0.4s cubic-bezier(.4,2,.6,1), opacity 0.3s, transform 0.3s',
+    overflow: 'hidden',
+    maxHeight: 500,
+    opacity: 1,
+    transform: 'scaleY(1)',
+    pointerEvents: 'auto',
+  },
+  contentHidden: {
+    maxHeight: 0,
+    opacity: 0,
+    transform: 'scaleY(0.95)',
+    pointerEvents: 'none',
   },
   key: {
     display: 'inline-block',
@@ -37,6 +52,7 @@ const hintStyles = {
     borderRadius: '4px',
     cursor: 'pointer',
     pointerEvents: 'auto',
+    transition: 'background 0.2s, color 0.2s',
   },
 };
 
@@ -47,19 +63,22 @@ export default function ControlsHint() {
 
   return (
     <div style={hintStyles.container}>
-      {visible && (
-        <>
-          <div>
-            <Key>W</Key><Key>A</Key><Key>S</Key><Key>D</Key> / <Key>↑</Key><Key>↓</Key><Key>←</Key><Key>→</Key> — Move Camera
-          </div>
-          <div><Key>Q</Key><Key>E</Key> — Zoom In/Out</div>
-          <div><Key>Ctrl</Key>+<Key>Z</Key> — Undo</div>
-          <div><Key>Ctrl</Key>+<Key>Y</Key> — Redo</div>
-          <div><Key>Ctrl</Key>+<Key>C</Key> — Copy</div>
-          <div><Key>Ctrl</Key>+<Key>V</Key> — Paste</div>
-          <div>Right Click Container to Edit Dimensions</div>
-        </>
-      )}
+      <div
+        style={{
+          ...hintStyles.content,
+          ...(visible ? {} : hintStyles.contentHidden),
+        }}
+      >
+        <div>
+          <Key>W</Key><Key>A</Key><Key>S</Key><Key>D</Key> / <Key>↑</Key><Key>↓</Key><Key>←</Key><Key>→</Key> — Move Camera
+        </div>
+        <div><Key>Q</Key><Key>E</Key> — Zoom In/Out</div>
+        <div><Key>Ctrl</Key>+<Key>Z</Key> — Undo</div>
+        <div><Key>Ctrl</Key>+<Key>Y</Key> — Redo</div>
+        <div><Key>Ctrl</Key>+<Key>C</Key> — Copy</div>
+        <div><Key>Ctrl</Key>+<Key>V</Key> — Paste</div>
+        <div>Right Click Container to Edit Dimensions</div>
+      </div>
       <button
         onClick={() => setVisible(!visible)}
         style={hintStyles.toggleButton}

@@ -21,7 +21,7 @@ const mapStyles = {
     resize: 'horizontal',
     overflow: 'hidden',
     padding: '10px',
-    minWidth: '300px',
+    minWidth: '328px',
     maxWidth: '30vw',
 
 
@@ -130,7 +130,7 @@ export default function TopDownMapView({ cubes, selectedRef, setSelectedRef, onC
   const handleMouseMove = (e) => {
     if (dragging && containerRef.current) {
       const { offsetWidth, offsetHeight } = containerRef.current;
-      const padding = 12;
+      const padding = 5;
 
       const rawX = e.clientX - dragOffset.current.x;
       const rawY = e.clientY - dragOffset.current.y;
