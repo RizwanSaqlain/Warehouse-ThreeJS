@@ -115,9 +115,22 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
       <Environment preset="sunset" />
       <ambientLight intensity={0.6} />
       <directionalLight position={[5, 10, 7.5]} intensity={1} castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048} shadow-camera-far={50} shadow-camera-left={-10} shadow-camera-right={10} shadow-camera-top={10} shadow-camera-bottom={-10} />
-      <gridHelper args={[40, 40]} />
+
+      {/* Dynamic grid and ground plane */}
+      <gridHelper
+        args={[
+          Math.max(bounds.width, bounds.depth) + 20, // grid size + 20 units
+          Math.max(2, Math.floor(Math.max(bounds.width, bounds.depth) + 20)), // divisions
+          "#888",
+          "#444"
+        ]}
+        position={[0, 0.02, 0]}
+      />
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[40, 40]} />
+        <planeGeometry args={[
+          Math.max(bounds.width, bounds.depth) + 20, // floor size + 20 units
+          Math.max(bounds.width, bounds.depth) + 20
+        ]} />
         <meshStandardMaterial color="#24292E" metalness={0.5} roughness={0.2} />
       </mesh>
       <mesh
@@ -128,7 +141,7 @@ const SceneContents = ({ cubes, selectedRef, setSelectedRef, searchQuery, onRigh
           setDimensionTargetRef?.(null);
         }}
       >
-        <planeGeometry args={[100, 100]} />
+        <planeGeometry args={[bounds.width * 2, bounds.depth * 2]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
 

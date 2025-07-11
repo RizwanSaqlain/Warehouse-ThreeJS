@@ -204,6 +204,88 @@ export default function App() {
 
 
 
+  const generateDemoCubes = useCallback(() => {
+    const { width, depth } = bounds;
+    const aisleWidth = 1; // Walking space between containers
+    const minSize = 1.2;
+    const maxSize = 3.2;
+    let id = 1;
+    const demoCubes = [];
+    const categories = ['Electronics', 'Clothing', 'Food', 'Books', 'Toys', 'Hardware'];
+    const categoryColors = {
+      Electronics: '#ffb347',
+      Clothing:    '#87ceeb',
+      Food:        '#90ee90',
+      Books:       '#f08080',
+      Toys:        '#b19cd9',
+      Hardware:    '#ffd700'
+    };
+    const categoryHeights = {
+      Electronics: [1.2, 2.0],
+      Clothing:    [1.0, 1.8],
+      Food:        [1.0, 1.5],
+      Books:       [1.0, 1.7],
+      Toys:        [1.0, 1.6],
+      Hardware:    [1.2, 2.2]
+    };
+    const notesPool = [
+      'Demo item', 'Fragile', 'Heavy', 'Keep dry', 'Stackable', 'Handle with care', 'Top seller', 'Seasonal'
+    ];
+    let posZ = -depth / 2 + maxSize / 2;
+    let row = 0;
+    let safety = 0; // Prevent infinite loop
+
+    while (posZ + minSize / 2 <= depth / 2 && safety < 1000) {
+      let posX = -width / 2 + maxSize / 2;
+      let col = 0;
+      while (posX + minSize / 2 <= width / 2 && safety < 1000) {
+        // Pick a category for this cube
+        const category = categories[Math.floor(Math.random() * categories.length)];
+        // Randomize size for each cube
+        const w = parseFloat((Math.random() * (maxSize - minSize) + minSize).toFixed(2));
+        const d = parseFloat((Math.random() * (maxSize - minSize) + minSize).toFixed(2));
+        // Height based on category
+        const [minH, maxH] = categoryHeights[category];
+        const h = parseFloat((Math.random() * (maxH - minH) + minH).toFixed(2));
+        // Make sure the cube fits in the warehouse
+        if (
+          posX + w / 2 <= width / 2 &&
+          posZ + d / 2 <= depth / 2
+        ) {
+          demoCubes.push({
+            id: id++,
+            ref: React.createRef(),
+            position: [posX, h / 2, posZ],
+            size: [w, h, d],
+            row,
+            col,
+            item: {
+              sku: `SKU-${category.slice(0,3).toUpperCase()}-${id}`,
+              quantity: Math.floor(Math.random() * 200) + 1,
+              category,
+              weight: parseFloat((Math.random() * 100).toFixed(2)),
+              notes: notesPool[Math.floor(Math.random() * notesPool.length)],
+              shipped: false,
+              color: categoryColors[category]
+            }
+          });
+        }
+        // Move X by width of this cube plus aisle
+        posX += w + aisleWidth;
+        col++;
+        safety++;
+      }
+      // Move Z by maxSize plus aisle (to avoid overlap)
+      posZ += maxSize + aisleWidth;
+      row++;
+      safety++;
+    }
+    setCubes(demoCubes);
+    setSelectedRef(null);
+    setHistory([]);
+    setRedoStack([]);
+  }, [bounds, setCubes, setSelectedRef, setHistory, setRedoStack]);
+
   useEffect(() => {
     let lastKeyTime = 0;
     const handleKeyDown = (e) => {
@@ -342,6 +424,7 @@ export default function App() {
         musicOn={musicOn}
         bounds={bounds}
         onBoundsChange={(newBounds) => setBounds(prev => ({ ...prev, ...newBounds }))}
+        generateDemoCubes={generateDemoCubes} // <-- add this prop
       />
 
       <Canvas camera={cameraSettings} shadows>
@@ -376,6 +459,7 @@ export default function App() {
         <TopDownMapView
           cubes={cubes}
           selectedRef={selectedRef}
+          setSelectedRef={setSelectedRef} // <-- Pass this prop
           onClose={() => setShowMapView(false)}
           bounds={bounds}
         />

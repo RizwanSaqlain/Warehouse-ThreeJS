@@ -27,10 +27,20 @@ const Cube = ({
   const labelRef = useRef();
   const { camera } = useThree();
 
+  // Calculate distance from camera to cube center
+  const [fontSize, setFontSize] = useState(0.25);
+  const [tooltipFactor, setTooltipFactor] = useState(10);
+
   useFrame(() => {
     if (hovered && labelRef.current) {
       const target = camera.position.clone().sub(labelRef.current.position);
       labelRef.current.rotation.y = Math.atan2(target.x, target.z);
+    }
+    if (hovered) {
+      const camDist = camera.position.distanceTo({ x: position[0], y: position[1], z: position[2] });
+      // Clamp font size and tooltip factor for usability
+      setFontSize(Math.max(0.25, Math.min(0.7, camDist * 0.07)));
+      setTooltipFactor(Math.max(10, Math.min(30, camDist * 1.2)));
     }
   });
 
@@ -67,7 +77,7 @@ const Cube = ({
         <Text
           ref={labelRef}
           position={[0, size[1] / 2 + 0.3, 0]}
-          fontSize={0.25}
+          fontSize={fontSize}
           color="white"
           anchorX="center"
           anchorY="middle"
@@ -82,7 +92,7 @@ const Cube = ({
         <Html
           position={[0, size[1] / 2 + 0.8, 0]}
           center
-          distanceFactor={10}
+          distanceFactor={tooltipFactor}
           style={tooltipStyle}
         >
           <div><strong>SKU:</strong> {item?.sku || '—'}</div>

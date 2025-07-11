@@ -15,7 +15,8 @@ const Toolbar = ({
   toggleMusic,
   musicOn,
   onBoundsChange,
-  bounds
+  bounds,
+  generateDemoCubes,
 }) => {
   const [dragging, setDragging] = useState(false);
   const [position, setPosition] = useState({ x: 20 , y: 20 });
@@ -78,7 +79,6 @@ const Toolbar = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-
       <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>
         📦 Warehouse Tools
       </h3>
@@ -94,14 +94,15 @@ const Toolbar = ({
         >
           🗑️ Delete Selected
         </button>
+        <button onClick={generateDemoCubes} style={buttonStyle('#607d8b')}>
+          🏗️ Generate Demo
+        </button>
       </div>
 
       <div style={sectionStyle}>
         <button onClick={handleExport} style={buttonStyle('#2196f3')}>
           📤 Export Layout
         </button>
-
-        <>
         <button onClick={() => fileInputRef.current.click()} style={buttonStyle('#ff9800')}>
           📥 Import Layout
         </button>
@@ -112,62 +113,65 @@ const Toolbar = ({
           onChange={handleImport}
           style={{ display: 'none' }}
         />
-      </>
       </div>
 
-            <div style={sectionStyle}>
-              <label style={labelStyle}>📐 Set Warehouse Bounds</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <input
-                  type="number"
-                  name="width"
-                  min="1"
-                  value={localBounds.width}
-                  onChange={handleBoundChange}
-                  style={{ ...inputStyle, width: '100%' }}
-                  placeholder="Width"
-                />
-                <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>×</span>
-                <input
-                  type="number"
-                  name="depth"
-                  min="1"
-                  value={localBounds.depth}
-                  onChange={handleBoundChange}
-                  style={{ ...inputStyle, width: '100%' }}
-                  placeholder="Depth"
-                />
-              </div>
-            </div>
+      <div style={sectionStyle}>
+        <label style={labelStyle}>📐 Set Warehouse Bounds</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <input
+            type="number"
+            name="width"
+            min="1"
+            value={localBounds.width}
+            onChange={handleBoundChange}
+            style={{ ...inputStyle, width: '100%' }}
+            placeholder="Width"
+          />
+          <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>×</span>
+          <input
+            type="number"
+            name="depth"
+            min="1"
+            value={localBounds.depth}
+            onChange={handleBoundChange}
+            style={{ ...inputStyle, width: '100%' }}
+            placeholder="Depth"
+          />
+        </div>
+      </div>
 
-      <label style={labelStyle}>Search Containers
-      <input
-        type="text"
-        placeholder="🔍 Search SKU or Category..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        style={inputStyle}
-      />
-      </label>
+      <div style={sectionStyle}>
+        <label style={labelStyle}>🔍 Search Containers
+          <input
+            type="text"
+            placeholder="Search SKU or Category..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={inputStyle}
+          />
+        </label>
+      </div>
 
-      <label style={checkboxLabelStyle}>
-        <input
-          type="checkbox"
-          checked={snapEnabled}
-          onChange={(e) => setSnapEnabled(e.target.checked)}
-          style={{ width: '18px', height: '18px' }}
-        />
-        Enable Snapping
-      </label>
+      <div style={sectionStyle}>
+        <label style={checkboxLabelStyle}>
+          <input
+            type="checkbox"
+            checked={snapEnabled}
+            onChange={(e) => setSnapEnabled(e.target.checked)}
+            style={{ width: '18px', height: '18px' }}
+          />
+          Enable Snapping
+        </label>
+      </div>
 
-      <button onClick={toggleMusic} style={buttonStyle('#9c27b0')}>
-        {musicOn ? '🔇 Mute Music' : '🔊 Play Music'}
-      </button>
-
-
-      <button onClick={() => setShowMapView((prev) => !prev)} style={buttonStyle('#673ab7')}>
-        {showMapView ? '🗺️ Hide 2D Map' : '🗺️ Show 2D Map'}
-      </button>
+      <div style={sectionStyle}>
+        <button onClick={toggleMusic} style={buttonStyle('#9c27b0')}>
+          {musicOn ? '🔇 Mute Music' : '🔊 Play Music'}
+        </button>
+        <button onClick={() => setShowMapView((prev) => !prev)} style={buttonStyle('#673ab7')}>
+          {showMapView ? '🗺️ Hide 2D Map' : '🗺️ Show 2D Map'}
+        </button>
+      </div>
     </div>
   );
 };

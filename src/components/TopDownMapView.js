@@ -77,7 +77,7 @@ const mapStyles = {
   },
 };
 
-export default function TopDownMapView({ cubes, selectedRef, onClose, bounds }) {
+export default function TopDownMapView({ cubes, selectedRef, setSelectedRef, onClose, bounds }) {
   const WAREHOUSE_WIDTH = bounds.width;
   const WAREHOUSE_DEPTH = bounds.depth;
   const defaultX = 20;
@@ -189,9 +189,6 @@ export default function TopDownMapView({ cubes, selectedRef, onClose, bounds }) 
       <div
         ref={canvasRef}
         style={mapStyles.canvas(cellSize, canvasWidth, canvasHeight)}
-
-
-
       >
         {cubes.map(cube => {
           const [x, , z] = cube.position;
@@ -201,7 +198,6 @@ export default function TopDownMapView({ cubes, selectedRef, onClose, bounds }) 
           const pxH = (d / WAREHOUSE_DEPTH) * canvasHeight;
           const pxX = ((x - w / 2 + WAREHOUSE_WIDTH / 2) / WAREHOUSE_WIDTH) * canvasWidth;
           const pxZ = ((z - d / 2 + WAREHOUSE_DEPTH / 2) / WAREHOUSE_DEPTH) * canvasHeight;
-
 
           const isSelected = cube.ref === selectedRef;
 
@@ -223,8 +219,10 @@ export default function TopDownMapView({ cubes, selectedRef, onClose, bounds }) 
                 textAlign: 'center',
                 overflow: 'hidden',
                 padding: '2px',
+                cursor: 'pointer', // Add pointer cursor for clarity
               }}
               title={cube.item?.sku}
+              onClick={() => setSelectedRef(cube.ref)} // <-- Add this line
               onMouseEnter={(e) => (e.currentTarget.style.opacity = 1)}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = 0.6)}
             />

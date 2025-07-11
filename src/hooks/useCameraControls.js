@@ -49,6 +49,14 @@ export function useCameraControls(camera, orbitControlsRef) {
       orbitControlsRef.current?.update();
     };
 
+    const handleKeyDown = (e) => {
+      handleKey(e, true);
+    };
+
+    const handleKeyUp = (e) => {
+      handleKey(e, false);
+    };
+
     const handleKey = (e, pressed) => {
       keys[e.key.toLowerCase()] = pressed;
     };
@@ -59,11 +67,11 @@ export function useCameraControls(camera, orbitControlsRef) {
     };
     tick();
 
-    window.addEventListener('keydown', e => handleKey(e, true));
-    window.addEventListener('keyup', e => handleKey(e, false));
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     return () => {
-      window.removeEventListener('keydown', e => handleKey(e, true));
-      window.removeEventListener('keyup', e => handleKey(e, false));
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, [camera, orbitControlsRef]);
 }
